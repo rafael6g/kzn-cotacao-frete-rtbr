@@ -12,7 +12,6 @@ Estratégia:
 """
 
 import re
-import asyncio
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -40,12 +39,14 @@ logger = get_logger(__name__)
 settings = get_settings()
 
 
-async def _digitar_humano(page, seletor: str, texto: str) -> None:
-    """Digita texto no campo usando delay fixo de 50ms/char — rápido e suficiente."""
-    await page.click(seletor)
-    await page.keyboard.press("Control+a")
-    await page.keyboard.press("Delete")
-    await page.type(seletor, texto, delay=50)
+async def _digitar_endereco(page, seletor: str, texto: str) -> None:
+    """
+    Digita endereço caractere a caractere com delay mínimo (15ms) para acionar
+    o autocomplete jQuery UI — o site depende dos eventos keydown/keypress.
+    Mais rápido que antes (era 50ms) mas confiável para disparar o dropdown.
+    """
+    await page.fill(seletor, "")
+    await page.type(seletor, texto, delay=15)
 
 
 URL_BASE = "https://rotasbrasil.com.br"
@@ -191,16 +192,14 @@ class RotasBrasilScraper(SiteScraper):
         """Limpa os campos de origem e destino para nova consulta."""
         for sel in [SEL_INPUT_ORIGEM, SEL_INPUT_DESTINO]:
             await self._page.fill(sel, "")
-        await self._page.wait_for_timeout(300)
 
     async def _selecionar_veiculo(self, veiculo_id: int) -> None:
         classes = {1: "carro", 2: "caminhao", 3: "onibus", 4: "moto"}
         classe = classes.get(veiculo_id, "caminhao")
         sel = f"div.icon-veiculo.{classe}"
         try:
-            await self._page.click(sel, timeout=5000)
+            await self._page.click(sel, timeout=3000)
             logger.debug(f"Veículo '{classe}' selecionado via clique.")
-            await self._page.wait_for_timeout(1000)
         except Exception:
             await self._page.evaluate(
                 f"document.getElementById('veiculo').value = '{veiculo_id}'"
@@ -209,14 +208,14 @@ class RotasBrasilScraper(SiteScraper):
 
     async def _preencher_endereco(self, seletor: str, endereco: str) -> None:
         """
-        Digita o endereço e seleciona a primeira sugestão VISÍVEL do autocomplete jQuery UI.
-        Formato esperado: "Cidade, Estado, Brasil".
+        Preenche o endereço e seleciona a primeira sugestão do autocomplete jQuery UI.
+        Usa fill() para preencher instantaneamente, depois aguarda o dropdown aparecer.
         """
-        await _digitar_humano(self._page, seletor, endereco)
+        await _digitar_endereco(self._page, seletor, endereco)
 
         try:
             loc = self._page.locator(".ui-autocomplete .ui-menu-item").first
-            await loc.wait_for(state="visible", timeout=4000)
+            await loc.wait_for(state="visible", timeout=5000)
             sugestao = (await loc.inner_text()).strip()
             await loc.click()
             logger.debug(f"Autocomplete: clicou em '{sugestao[:50]}' para: {endereco}")
@@ -225,23 +224,19 @@ class RotasBrasilScraper(SiteScraper):
             await self._page.press(seletor, "Tab")
             logger.debug(f"Sem autocomplete — Tab pressionado para: {endereco}")
 
-        await self._page.wait_for_timeout(500)
-
     async def _preencher_combustivel(self, preco: float, consumo: float) -> None:
         preco_str = f"{preco:.2f}".replace(".", ",")
         consumo_str = f"{consumo:.2f}".replace(".", ",")
 
-        await _digitar_humano(self._page, SEL_INPUT_COMBUSTIVEL, preco_str)
-        await asyncio.sleep(0.2)
-        await _digitar_humano(self._page, SEL_INPUT_CONSUMO, consumo_str)
+        await self._page.fill(SEL_INPUT_COMBUSTIVEL, preco_str)
+        await self._page.fill(SEL_INPUT_CONSUMO, consumo_str)
 
         logger.debug(f"Combustível: R$ {preco_str}/L | Consumo: {consumo_str} km/L")
 
     async def _selecionar_eixos(self, eixos: int) -> None:
         try:
-            await self._page.wait_for_selector(SEL_BTN_MOSTRAR_EIXO, timeout=5000, state="visible")
+            await self._page.wait_for_selector(SEL_BTN_MOSTRAR_EIXO, timeout=3000, state="visible")
             await self._page.click(SEL_BTN_MOSTRAR_EIXO)
-            await self._page.wait_for_timeout(800)
 
             sel_eixo = f"div.eixoDiv[eixoid='{eixos}']"
             await self._page.wait_for_selector(sel_eixo, timeout=3000, state="visible")
@@ -295,19 +290,19 @@ class RotasBrasilScraper(SiteScraper):
             except PlaywrightTimeout:
                 pass  # se não sumiu, continua mesmo assim
 
-        espera_ms = max(delay_segundos * 1000, 2000)  # mínimo 2s
-        logger.info(f"Aguardando {espera_ms / 1000:.0f}s para o resultado carregar...")
-        await self._page.wait_for_timeout(espera_ms)
-
+        # Aguarda o resultado aparecer — usa delay_segundos como timeout máximo.
+        # Assim, se o site responder em 3s num delay de 15s, avança imediatamente.
+        timeout_ms = max(delay_segundos * 1000, 8000)  # mínimo 8s
+        logger.info(f"Aguardando resultado (timeout máx: {timeout_ms / 1000:.0f}s)...")
         try:
             await self._page.wait_for_selector(
                 SEL_RESULTADO_ATIVO,
                 state="visible",
-                timeout=10000,
+                timeout=timeout_ms,
             )
         except PlaywrightTimeout:
             raise TimeoutConsultaError(
-                f"Resultado não apareceu após {espera_ms / 1000:.0f}s de espera"
+                f"Resultado não apareceu após {timeout_ms / 1000:.0f}s de espera"
             )
 
     # ── Extração do resultado ─────────────────────────────────────────

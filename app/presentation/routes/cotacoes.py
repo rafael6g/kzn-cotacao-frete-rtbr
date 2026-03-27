@@ -92,7 +92,7 @@ async def criar_cotacao(
     arquivo: UploadFile = File(...),
     nome_cotacao: str = Form(...),
     config_id: int = Form(...),
-    delay_segundos: int = Form(default=15),
+    delay_segundos: int = Form(default=10),
     eixos: int = Form(default=6),
     preco_combustivel: float = Form(...),
     consumo_km_l: float = Form(...),

@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     playwright_slow_mo_ms: int = 0
 
     # Processamento
-    delay_padrao_segundos: int = 15
+    delay_padrao_segundos: int = 10
     max_retentativas: int = 2
     uploads_dir: str = "uploads"
     outputs_dir: str = "outputs"
