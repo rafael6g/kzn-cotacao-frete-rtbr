@@ -158,10 +158,14 @@
         break;
 
       case "download_pronto":
-        adicionarLog(`📥 ${evento.mensagem}`, "text-yellow-300 font-bold");
-        btnDownload.href = `/cotacoes/${loteId}/download`;
-        areaDownload.classList.remove("hidden");
         evtSource.close();
+        if (cache + site > 0) {
+          adicionarLog(`📥 ${evento.mensagem}`, "text-yellow-300 font-bold");
+          btnDownload.href = `/cotacoes/${loteId}/download`;
+          areaDownload.classList.remove("hidden");
+        } else {
+          adicionarLog("⚠ Todas as linhas falharam — nenhum resultado para baixar.", "text-orange-400 font-bold");
+        }
         break;
 
       case "erro_critico":
