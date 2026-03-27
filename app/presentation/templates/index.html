@@ -229,20 +229,8 @@
         </div>
       </div>
 
-      <!-- Row 3: Tipo carga + Delay -->
+      <!-- Row 3: Delay -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div class="form-control">
-          <label class="label pb-1">
-            <span class="label-text text-gray-400 text-xs font-medium">Tipo de Carga</span>
-          </label>
-          <select name="tipo_carga" class="select select-bordered select-sm bg-black/30 border-white/10 text-gray-200">
-            <option value="Carga Geral" selected>Carga Geral</option>
-            <option value="Granel">Granel</option>
-            <option value="Neogranel">Neogranel</option>
-            <option value="Frigorificado">Frigorificado</option>
-            <option value="Perigosa">Perigosa</option>
-          </select>
-        </div>
         <div class="form-control">
           <label class="label pb-1">
             <span class="label-text text-gray-400 text-xs font-medium">
@@ -254,6 +242,14 @@
           </label>
           <input type="number" name="delay_segundos" min="5" max="120" value="{{ delay_padrao }}" required
             class="input input-bordered input-sm bg-black/30 border-white/10 text-gray-200 focus:border-green-700" />
+        </div>
+        <div class="form-control">
+          <label class="label pb-1">
+            <span class="label-text text-gray-400 text-xs font-medium">Tipos de Carga</span>
+          </label>
+          <div class="input input-bordered input-sm bg-black/20 border-white/10 text-gray-500 flex items-center text-xs px-3">
+            Todos os 12 tipos extraídos automaticamente
+          </div>
         </div>
       </div>
 

@@ -18,6 +18,7 @@ class GerarExcelUseCase:
         lote: LoteCotacao,
         cotacoes: list[Cotacao],
         arquivo_entrada_path: str,
+        validade_cache_horas: int = 0,
     ) -> str:
         """
         Gera o Excel de resultado mesclando dados originais + resultados.
@@ -38,6 +39,7 @@ class GerarExcelUseCase:
             arquivo_entrada=arquivo_entrada_path,
             cotacoes=cotacoes,
             output_path=str(output_path),
+            validade_cache_horas=validade_cache_horas,
         )
 
         logger.info(f"Excel gerado com sucesso: {output_path}")

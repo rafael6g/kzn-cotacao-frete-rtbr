@@ -18,7 +18,7 @@ class ParametrosRota:
     eixos: int            # número de eixos (ex: 6)
     preco_combustivel: float
     consumo_km_l: float
-    tipo_carga: str = "Carga Geral"
+    tipo_carga: str = "todas"
     evitar_pedagio: bool = False
     evitar_balsa: bool = False
     data_tarifa: Optional[str] = None  # formato YYYY-MM-DD

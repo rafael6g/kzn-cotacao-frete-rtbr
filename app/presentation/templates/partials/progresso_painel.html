@@ -4,10 +4,6 @@
 -->
 <div
   class="card bg-base-100 shadow-xl"
-  hx-ext="sse"
-  sse-connect="/cotacoes/{{ lote.id }}/progresso"
-  sse-swap="message"
-  hx-swap="none"
   id="painel-progresso-container"
 >
   <div class="card-body">
@@ -40,15 +36,20 @@
       <div class="text-gray-500 italic">Aguardando início...</div>
     </div>
 
-    <!-- Botão de download (aparece ao concluir) -->
+    <!-- Botão abrir (aparece ao concluir) -->
     <div id="area-download" class="mt-3 hidden">
-      <a
-        id="btn-download"
-        href="#"
+      <button
+        id="btn-abrir"
+        onclick="abrirExcel()"
         class="btn btn-success w-full gap-2"
       >
-        📥 Baixar Excel de Resultados
-      </a>
+        📂 Abrir no Excel
+      </button>
+    </div>
+
+    <!-- Área de erro crítico (aparece só em falha) -->
+    <div id="area-erro" class="mt-3 hidden">
+      <div class="rounded border border-red-800 bg-red-950/40 p-3 text-xs text-red-300 font-mono whitespace-pre-wrap" id="detalhe-erro"></div>
     </div>
 
   </div>
@@ -69,6 +70,8 @@
   const ctErro  = document.getElementById("ct-erro");
   const areaDownload = document.getElementById("area-download");
   const btnDownload  = document.getElementById("btn-download");
+  const areaErro     = document.getElementById("area-erro");
+  const detalheErro  = document.getElementById("detalhe-erro");
 
   function adicionarLog(msg, cor = "text-green-400") {
     const linha = document.createElement("div");
@@ -139,18 +142,23 @@
         texto.textContent = "Concluído!";
         pct.textContent = "100%";
         barra.value = total;
-        evtSource.close();
+        // Não fechar aqui — aguarda "download_pronto" que vem em seguida
         break;
 
       case "download_pronto":
         adicionarLog(`📥 ${evento.mensagem}`, "text-yellow-300 font-bold");
         areaDownload.classList.remove("hidden");
         btnDownload.href = `/cotacoes/${loteId}/download`;
+        evtSource.close();
         break;
 
       case "erro_critico":
         adicionarLog(`💥 ERRO CRÍTICO: ${evento.mensagem}`, "text-red-400 font-bold");
-        texto.textContent = "Erro no processamento";
+        texto.textContent = "Erro — processamento interrompido";
+        pct.textContent = "✗";
+        pct.style.color = "#f87171";
+        areaErro.classList.remove("hidden");
+        detalheErro.textContent = evento.mensagem;
         evtSource.close();
         break;
     }
@@ -159,6 +167,12 @@
   evtSource.onerror = function() {
     adicionarLog("⚠ Conexão SSE interrompida.", "text-orange-400");
     evtSource.close();
+  };
+
+  window.abrirExcel = function() {
+    fetch(`/cotacoes/${loteId}/abrir`)
+      .then(function() { if (typeof fecharModalProgresso === 'function') fecharModalProgresso(); })
+      .catch(function() { if (typeof fecharModalProgresso === 'function') fecharModalProgresso(); });
   };
 })();
 </script>

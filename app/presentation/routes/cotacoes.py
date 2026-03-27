@@ -97,7 +97,6 @@ async def criar_cotacao(
     preco_combustivel: float = Form(...),
     consumo_km_l: float = Form(...),
     veiculo: int = Form(default=2),
-    tipo_carga: str = Form(default="Carga Geral"),
     modo_visivel: bool = Form(default=False),
 ):
     repo = get_xano_repository()
@@ -156,7 +155,6 @@ async def criar_cotacao(
                 str(linha.get("consumo_km_l", consumo_km_l))
                 .replace(",", ".")
             ),
-            tipo_carga=str(linha.get("tipo_carga", tipo_carga)).strip(),
         )
         cotacao = Cotacao(lote_id=lote.id, linha_numero=i, parametros=params)
         cotacao = await repo.criar_item(cotacao)
@@ -231,7 +229,10 @@ async def _executar_processamento(
                 )
 
                 gerar_excel = GerarExcelUseCase(excel_svc)
-                arquivo_saida = await gerar_excel.executar(lote_result, cotacoes, arquivo_path)
+                arquivo_saida = await gerar_excel.executar(
+                    lote_result, cotacoes, arquivo_path,
+                    validade_cache_horas=validade_cache_horas,
+                )
                 lote_result.arquivo_saida = Path(arquivo_saida).name
                 await repo.atualizar_lote(lote_result)
 
@@ -271,7 +272,7 @@ async def stream_progresso(lote_id: int):
                 evento = await asyncio.wait_for(fila.get(), timeout=30.0)
                 yield f"data: {json.dumps(evento, ensure_ascii=False)}\n\n"
                 # Encerra stream quando processamento terminar
-                if evento.get("tipo") in ("fim", "erro_critico", "download_pronto"):
+                if evento.get("tipo") in ("erro_critico", "download_pronto"):
                     break
             except asyncio.TimeoutError:
                 # Keep-alive para não fechar a conexão
@@ -306,3 +307,30 @@ async def download_excel(lote_id: int):
         filename=lote.arquivo_saida,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
+
+
+# ── Abrir Excel diretamente (funciona porque é localhost) ─────────────
+
+@router.get("/cotacoes/{lote_id}/abrir")
+async def abrir_excel(lote_id: int):
+    import os, sys
+    repo = get_xano_repository()
+    lote = await repo.buscar_lote(lote_id)
+
+    if not lote or not lote.arquivo_saida:
+        raise HTTPException(404, "Arquivo não encontrado.")
+
+    caminho = (Path(settings.outputs_dir) / lote.arquivo_saida).resolve()
+    if not caminho.exists():
+        raise HTTPException(404, "Arquivo expirado ou removido.")
+
+    try:
+        if sys.platform == "win32":
+            os.startfile(str(caminho))
+        else:
+            import subprocess
+            subprocess.Popen(["xdg-open", str(caminho)])
+    except Exception as e:
+        raise HTTPException(500, f"Não foi possível abrir o arquivo: {e}")
+
+    return {"ok": True}

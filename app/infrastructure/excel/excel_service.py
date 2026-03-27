@@ -1,13 +1,14 @@
 import pandas as pd
 from pathlib import Path
 from typing import Optional
+from datetime import datetime, timedelta, timezone
 
 from app.domain.entities.cotacao import Cotacao, StatusCotacao
 from app.core.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-# Colunas adicionadas ao Excel de saída
+# Colunas fixas adicionadas ao Excel de saída (fretes são colunas dinâmicas)
 COLUNAS_RESULTADO = [
     "resultado_origem",
     "resultado_destino",
@@ -19,7 +20,6 @@ COLUNAS_RESULTADO = [
     "resultado_valor_pedagio",
     "resultado_valor_combustivel",
     "resultado_valor_total",
-    "resultado_valor_frete",
     "resultado_consultado_em",
     "resultado_erro",
 ]
@@ -70,6 +70,7 @@ class ExcelService:
         arquivo_entrada: str,
         cotacoes: list[Cotacao],
         output_path: str,
+        validade_cache_horas: int = 0,
     ) -> None:
         """
         Gera Excel de resultado:
@@ -106,8 +107,19 @@ class ExcelService:
             row["resultado_valor_pedagio"] = r.valor_pedagio if r else ""
             row["resultado_valor_combustivel"] = r.valor_combustivel if r else ""
             row["resultado_valor_total"] = r.valor_total if r else ""
-            row["resultado_valor_frete"] = r.valor_frete if r else ""
             row["resultado_consultado_em"] = r.consultado_em if r else ""
+            # Validade do cache
+            validade_ate = ""
+            if r and r.consultado_em and validade_cache_horas > 0:
+                try:
+                    dt = datetime.fromisoformat(r.consultado_em)
+                    validade_ate = (dt + timedelta(hours=validade_cache_horas)).strftime("%d/%m/%Y %H:%M")
+                except Exception:
+                    pass
+            row["resultado_validade_ate"] = validade_ate
+            # Colunas dinâmicas — um campo por tipo de carga (ex: "Tipo_Carga_Carga Geral")
+            for tipo, val in (r.fretes.items() if r else {}.items()):
+                row[tipo] = val
             row["resultado_erro"] = cotacao.erro_mensagem or ""
             rows.append(row)
 
@@ -123,6 +135,10 @@ class ExcelService:
         else:
             df_resultado = df_resultado.drop(columns=["_linha"], errors="ignore")
             df_final = df_resultado
+
+        # Remove prefixo "resultado_" das colunas de saída
+        rename = {c: c[len("resultado_"):] for c in df_final.columns if c.startswith("resultado_")}
+        df_final = df_final.rename(columns=rename)
 
         # Estiliza e salva
         with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
@@ -142,9 +158,16 @@ class ExcelService:
             azul  = PatternFill("solid", fgColor="1565C0")
             branco = Font(color="FFFFFF", bold=True)
 
+            COLUNAS_AZUL = {
+                "origem", "destino", "status", "fonte", "tempo_viagem",
+                "distancia_km", "rota_descricao", "valor_pedagio",
+                "valor_combustivel", "valor_total", "consultado_em",
+                "validade_ate", "erro",
+            }
             for cell in ws[1]:
-                col = str(cell.value or "").lower()
-                cell.fill = azul if col.startswith("resultado_") else verde
+                col = str(cell.value or "")
+                is_resultado = col in COLUNAS_AZUL or col.startswith("Tipo_Carga_")
+                cell.fill = azul if is_resultado else verde
                 cell.font = branco
                 cell.alignment = Alignment(horizontal="center")
 

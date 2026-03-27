@@ -1,3 +1,16 @@
+import asyncio
+import sys
+
+# DEVE ser a primeira coisa a rodar — antes de qualquer import do FastAPI/Uvicorn.
+# No Windows, o Python usa SelectorEventLoop por padrão, que não suporta sub-processos
+# (necessário para o Playwright abrir o Chromium). ProactorEventLoop resolve isso.
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+
+import logging
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+logging.getLogger("httpx").setLevel(logging.WARNING)
+
 from contextlib import asynccontextmanager
 from pathlib import Path
 

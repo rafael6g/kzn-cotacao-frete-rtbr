@@ -23,9 +23,10 @@ EIXOS      = 6
 COMBUSTIVEL = "7,25"
 CONSUMO     = "2,50"
 
-OUTPUT_HTML  = Path("diagnostico_resultado.html")
-OUTPUT_TXT   = Path("diagnostico_resultado.txt")
-OUTPUT_EXCEL = Path("diagnostico_resultado.xlsx")
+_DIR = Path(__file__).parent
+OUTPUT_HTML  = _DIR / "diagnostico_resultado.html"
+OUTPUT_TXT   = _DIR / "diagnostico_resultado.txt"
+OUTPUT_EXCEL = _DIR / "diagnostico_resultado.xlsx"
 
 
 # ── Digitação com delay fixo (50ms/char) — rápida e suficiente ───────

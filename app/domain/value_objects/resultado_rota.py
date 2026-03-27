@@ -1,5 +1,4 @@
 from dataclasses import dataclass, field
-from typing import Optional
 from datetime import datetime
 
 
@@ -15,8 +14,9 @@ class ResultadoRota:
     valor_pedagio: str          # ex: "R$ 207,00"
     valor_combustivel: str      # ex: "R$ 1.119,91"
     valor_total: str            # ex: "R$ 1.326,91"
-    valor_frete: Optional[str] = None   # ex: "R$ 3.511,62" (Carga Geral)
-    consultado_em: Optional[str] = None # ISO datetime da consulta
+    fretes: dict = field(default_factory=dict)   # ex: {"Tipo_Carga_Carga Geral": "R$ 3.511,62", ...}
+    consultado_em: str = ""     # ISO datetime da consulta
+    expira_em_iso: str = ""     # Data de expiração do cache (DD/MM/AAAA HH:MM), injetado pelo repo
 
     def to_dict(self) -> dict:
         return {
@@ -26,7 +26,7 @@ class ResultadoRota:
             "valor_pedagio": self.valor_pedagio,
             "valor_combustivel": self.valor_combustivel,
             "valor_total": self.valor_total,
-            "valor_frete": self.valor_frete,
+            "fretes": self.fretes,
             "consultado_em": self.consultado_em,
         }
 
@@ -39,6 +39,7 @@ class ResultadoRota:
             valor_pedagio=data.get("valor_pedagio", ""),
             valor_combustivel=data.get("valor_combustivel", ""),
             valor_total=data.get("valor_total", ""),
-            valor_frete=data.get("valor_frete"),
-            consultado_em=data.get("consultado_em"),
+            fretes=data.get("fretes", {}),        # compatível com cache antigo
+            consultado_em=data.get("consultado_em", ""),
+            expira_em_iso=data.get("expira_em_iso", ""),
         )
