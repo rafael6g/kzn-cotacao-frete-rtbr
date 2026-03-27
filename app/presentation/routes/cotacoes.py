@@ -236,6 +236,12 @@ async def _executar_processamento(
                 lote_result.arquivo_saida = Path(arquivo_saida).name
                 await repo.atualizar_lote(lote_result)
 
+                # Remove upload após processamento concluído
+                try:
+                    Path(arquivo_path).unlink(missing_ok=True)
+                except Exception:
+                    pass
+
                 _enfileirar({
                     "tipo": "download_pronto",
                     "lote_id": lote_result.id,
@@ -291,7 +297,7 @@ async def stream_progresso(lote_id: int):
 # ── Download do Excel gerado ─────────────────────────────────────────
 
 @router.get("/cotacoes/{lote_id}/download")
-async def download_excel(lote_id: int):
+async def download_excel(lote_id: int, background_tasks: BackgroundTasks):
     repo = get_xano_repository()
     lote = await repo.buscar_lote(lote_id)
 
@@ -302,6 +308,14 @@ async def download_excel(lote_id: int):
     if not caminho.exists():
         raise HTTPException(404, "Arquivo expirado ou removido.")
 
+    def _deletar_output(path: Path) -> None:
+        try:
+            path.unlink(missing_ok=True)
+        except Exception:
+            pass
+
+    background_tasks.add_task(_deletar_output, caminho)
+
     return FileResponse(
         path=str(caminho),
         filename=lote.arquivo_saida,
@@ -309,28 +323,3 @@ async def download_excel(lote_id: int):
     )
 
 
-# ── Abrir Excel diretamente (funciona porque é localhost) ─────────────
-
-@router.get("/cotacoes/{lote_id}/abrir")
-async def abrir_excel(lote_id: int):
-    import os, sys
-    repo = get_xano_repository()
-    lote = await repo.buscar_lote(lote_id)
-
-    if not lote or not lote.arquivo_saida:
-        raise HTTPException(404, "Arquivo não encontrado.")
-
-    caminho = (Path(settings.outputs_dir) / lote.arquivo_saida).resolve()
-    if not caminho.exists():
-        raise HTTPException(404, "Arquivo expirado ou removido.")
-
-    try:
-        if sys.platform == "win32":
-            os.startfile(str(caminho))
-        else:
-            import subprocess
-            subprocess.Popen(["xdg-open", str(caminho)])
-    except Exception as e:
-        raise HTTPException(500, f"Não foi possível abrir o arquivo: {e}")
-
-    return {"ok": True}

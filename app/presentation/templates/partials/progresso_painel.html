@@ -36,15 +36,16 @@
       <div class="text-gray-500 italic">Aguardando início...</div>
     </div>
 
-    <!-- Botão abrir (aparece ao concluir) -->
+    <!-- Botão download (aparece ao concluir) -->
     <div id="area-download" class="mt-3 hidden">
-      <button
-        id="btn-abrir"
-        onclick="abrirExcel()"
+      <a
+        id="btn-download"
+        href="#"
         class="btn btn-success w-full gap-2"
+        download
       >
-        📂 Abrir no Excel
-      </button>
+        ⬇ Baixar Excel
+      </a>
     </div>
 
     <!-- Área de erro crítico (aparece só em falha) -->
@@ -70,7 +71,7 @@
   const ctErro  = document.getElementById("ct-erro");
   const areaDownload = document.getElementById("area-download");
   const btnDownload  = document.getElementById("btn-download");
-  const areaErro     = document.getElementById("area-erro");
+  const areaErro    = document.getElementById("area-erro");
   const detalheErro  = document.getElementById("detalhe-erro");
 
   function adicionarLog(msg, cor = "text-green-400") {
@@ -147,9 +148,11 @@
 
       case "download_pronto":
         adicionarLog(`📥 ${evento.mensagem}`, "text-yellow-300 font-bold");
-        areaDownload.classList.remove("hidden");
         btnDownload.href = `/cotacoes/${loteId}/download`;
+        areaDownload.classList.remove("hidden");
         evtSource.close();
+        // Inicia download automaticamente
+        setTimeout(function() { btnDownload.click(); }, 300);
         break;
 
       case "erro_critico":
@@ -169,10 +172,5 @@
     evtSource.close();
   };
 
-  window.abrirExcel = function() {
-    fetch(`/cotacoes/${loteId}/abrir`)
-      .then(function() { if (typeof fecharModalProgresso === 'function') fecharModalProgresso(); })
-      .catch(function() { if (typeof fecharModalProgresso === 'function') fecharModalProgresso(); });
-  };
 })();
 </script>
