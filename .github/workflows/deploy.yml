@@ -20,23 +20,21 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-              set -e
-              cd /home/deploy/dev/cotacao-frete-rbrazil
+            set -e
+            cd /home/deploy/dev/cotacao-frete-rbrazil
 
-              echo ">>> Pull do repositório"
-              git fetch origin main
-              git checkout -- .
-              git clean -fd
-              # Preserva o .env
-              git checkout HEAD -- .env 2>/dev/null || true
-              git pull origin main
+            echo ">>> Pull do repositório"
+            git fetch origin main
+            git checkout -- .
+            git clean -fd --exclude=.env --exclude=uploads/ --exclude=outputs/ --exclude=logs/ --exclude=venv/
+            git pull origin main
 
-              echo ">>> Instalando dependências"
-              source venv/bin/activate
-              pip install -r requirements.txt --quiet
+            echo ">>> Instalando dependências"
+            source venv/bin/activate
+            pip install -r requirements.txt --quiet
 
-              echo ">>> Reiniciando aplicação"
-              pm2 restart ecosystem.config.js --update-env
+            echo ">>> Reiniciando aplicação"
+            pm2 restart ecosystem.config.js --update-env
 
-              echo ">>> Deploy concluído com sucesso!"
-              pm2 status
+            echo ">>> Deploy concluído com sucesso!"
+            pm2 status
