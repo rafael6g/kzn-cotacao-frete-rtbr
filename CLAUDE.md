@@ -80,6 +80,8 @@ APP_PORT=8000
 
 See `.env.example` for full list. Copy to `.env` before running.
 
+> **NUNCA delete, edite ou faça commit do `.env`** — ele está no `.gitignore` e fica APENAS no servidor de produção. Contém credenciais reais (Xano, secret key). Qualquer alteração de configuração deve ser feita diretamente no servidor via SSH.
+
 ## Xano Tables
 
 `configuracao_site`, `lote_cotacao`, `item_cotacao`, `cache_consulta`. See `README.md` for full schemas. The Xano base URL + group combine into `settings.xano_url` (see `app/core/config.py`).

@@ -171,7 +171,7 @@ async def criar_cotacao(
         config_id=config_id,
         validade_cache_horas=config.validade_cache_horas,
         arquivo_path=str(arquivo_path),
-        headless=not modo_visivel,
+        headless=True if settings.playwright_headless else not modo_visivel,
     )
 
     # Retorna fragmento HTMX com o painel de progresso
