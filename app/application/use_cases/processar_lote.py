@@ -174,16 +174,17 @@ class ProcessarLoteUseCase:
                             "mensagem": f"[{tipo_exc}] {cotacao.parametros.origem} → {cotacao.parametros.destino}: {e}",
                         })
 
-                # Atualiza progresso no Xano a cada item
                 lote.linhas_processadas = idx
-                try:
-                    await self._repo.atualizar_item(cotacao)
-                    await self._repo.atualizar_lote(lote)
-                except Exception as e:
-                    logger.warning(f"Falha ao persistir item {idx} no Xano (não interrompe o lote): {e}")
 
-            # ── Fim do loop ──────────────────────────────────────────
+            # ── Fim do loop — persiste tudo no Xano em paralelo ─────
             lote.status = StatusLote.CONCLUIDO
+            try:
+                await asyncio.gather(
+                    *[self._repo.atualizar_item(c) for c in cotacoes],
+                    return_exceptions=True,
+                )
+            except Exception as e:
+                logger.warning(f"Falha ao persistir itens no Xano: {e}")
 
         except Exception as e:
             logger.exception(f"Erro crítico no processamento do lote {lote.id}: {e}")
