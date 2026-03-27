@@ -24,10 +24,12 @@ jobs:
             cd /home/deploy/dev/cotacao-frete-rbrazil
 
             echo ">>> Pull do repositório"
+            [ -f .env ] && mv .env /tmp/.env.bak
             git fetch origin main
             git checkout -- .
             git clean -fd --exclude=.env --exclude=uploads/ --exclude=outputs/ --exclude=logs/ --exclude=venv/
             git pull origin main
+            [ -f /tmp/.env.bak ] && mv /tmp/.env.bak .env
 
             echo ">>> Instalando dependências"
             source venv/bin/activate
