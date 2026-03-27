@@ -140,7 +140,7 @@ async def criar_cotacao(
     lote = await repo.criar_lote(lote)
 
     # Monta lista de Cotacao a partir das linhas do Excel
-    cotacoes: list[Cotacao] = []
+    itens_para_criar: list[Cotacao] = []
     for i, linha in enumerate(linhas, start=1):
         params = ParametrosRota(
             origem=str(linha.get("origem", "")).strip(),
@@ -156,9 +156,12 @@ async def criar_cotacao(
                 .replace(",", ".")
             ),
         )
-        cotacao = Cotacao(lote_id=lote.id, linha_numero=i, parametros=params)
-        cotacao = await repo.criar_item(cotacao)
-        cotacoes.append(cotacao)
+        itens_para_criar.append(Cotacao(lote_id=lote.id, linha_numero=i, parametros=params))
+
+    # Cria todos os itens em paralelo — reduz N chamadas sequenciais ao Xano para 1 round
+    cotacoes: list[Cotacao] = list(
+        await asyncio.gather(*[repo.criar_item(c) for c in itens_para_criar])
+    )
 
     # Inicia processamento em background
     background_tasks.add_task(
