@@ -1,0 +1,37 @@
+name: Deploy para Produção
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            cd /home/deploy/dev/cotacao-frete-rbrazil
+
+            echo ">>> Pull do repositório"
+            git pull origin main
+
+            echo ">>> Instalando dependências"
+            source venv/bin/activate
+            pip install -r requirements.txt --quiet
+
+            echo ">>> Reiniciando aplicação"
+            pm2 restart ecosystem.config.js --update-env
+
+            echo ">>> Deploy concluído com sucesso!"
+            pm2 status
