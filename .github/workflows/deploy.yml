@@ -24,6 +24,9 @@ jobs:
             cd /home/deploy/dev/cotacao-frete-rbrazil
 
             echo ">>> Pull do repositório"
+            git fetch origin main
+            git checkout -- .
+            git clean -fd --exclude=.env --exclude=uploads/ --exclude=outputs/ --exclude=logs/ --exclude=venv/
             git pull origin main
 
             echo ">>> Instalando dependências"
