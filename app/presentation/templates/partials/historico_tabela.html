@@ -1,7 +1,7 @@
 {% if lotes %}
 <div class="overflow-x-auto mt-4">
   <table class="table table-zebra table-sm w-full">
-    <thead class="bg-green-700 text-white">
+    <thead class="text-white" style="background:#BF181B;">
       <tr>
         <th>ID</th>
         <th>Nome</th>
@@ -32,11 +32,12 @@
         </td>
         <td class="text-center">{{ lote.total_linhas }}</td>
         <td class="text-center text-blue-600">{{ lote.linhas_cache }}</td>
-        <td class="text-center text-green-600">{{ lote.linhas_consultadas }}</td>
+        <td class="text-center text-gray-300">{{ lote.linhas_consultadas }}</td>
         <td class="text-center text-red-500">{{ lote.linhas_erro }}</td>
         <td>
           <progress
-            class="progress progress-success w-20"
+            class="progress w-20"
+            style="accent-color:#BF181B;"
             value="{{ lote.linhas_processadas }}"
             max="{{ lote.total_linhas or 1 }}"
           ></progress>
@@ -44,7 +45,7 @@
         </td>
         <td class="flex gap-1">
           {% if lote.arquivo_saida %}
-          <a href="/cotacoes/{{ lote.id }}/download" class="btn btn-xs btn-success">📥</a>
+          <a href="/cotacoes/{{ lote.id }}/download" class="btn btn-xs text-white" style="background:#BF181B; border:none;">📥</a>
           {% endif %}
           {% if lote.status.value == "processando" %}
           <a href="/" hx-boost="true" class="btn btn-xs btn-warning">👁 Ver</a>
@@ -59,6 +60,6 @@
 <div class="text-center text-gray-400 py-10">
   <p class="text-4xl mb-2">📭</p>
   <p>Nenhuma cotação processada ainda.</p>
-  <a href="/" class="btn btn-success btn-sm mt-3">Criar primeira cotação</a>
+  <a href="/" class="btn btn-sm mt-3 text-white" style="background:#BF181B; border:none;">Criar primeira cotação</a>
 </div>
 {% endif %}

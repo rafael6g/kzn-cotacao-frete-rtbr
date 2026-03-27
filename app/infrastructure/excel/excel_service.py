@@ -97,8 +97,8 @@ class ExcelService:
             row = {"_linha": cotacao.linha_numero}
             r = cotacao.resultado
 
-            row["resultado_origem"] = cotacao.parametros.origem
-            row["resultado_destino"] = cotacao.parametros.destino
+            row["resultado_origem_site"] = cotacao.parametros.origem
+            row["resultado_destino_site"] = cotacao.parametros.destino
             row["resultado_status"] = cotacao.status.value
             row["resultado_fonte"] = cotacao.fonte.value if cotacao.fonte else ""
             row["resultado_tempo_viagem"] = r.tempo_viagem if r else ""
@@ -107,7 +107,14 @@ class ExcelService:
             row["resultado_valor_pedagio"] = r.valor_pedagio if r else ""
             row["resultado_valor_combustivel"] = r.valor_combustivel if r else ""
             row["resultado_valor_total"] = r.valor_total if r else ""
-            row["resultado_consultado_em"] = r.consultado_em if r else ""
+            consultado_em_fmt = ""
+            if r and r.consultado_em:
+                try:
+                    dt_c = datetime.fromisoformat(r.consultado_em)
+                    consultado_em_fmt = dt_c.strftime("%d/%m/%Y %H:%M")
+                except Exception:
+                    consultado_em_fmt = r.consultado_em
+            row["resultado_consultado_em"] = consultado_em_fmt
             # Validade do cache
             validade_ate = ""
             if r and r.consultado_em and validade_cache_horas > 0:
@@ -140,6 +147,61 @@ class ExcelService:
         rename = {c: c[len("resultado_"):] for c in df_final.columns if c.startswith("resultado_")}
         df_final = df_final.rename(columns=rename)
 
+        # Renomeia colunas originais de entrada e do scraper para nomes finais legíveis
+        rename_final = {}
+        if "origem" in df_final.columns:
+            rename_final["origem"] = "origem excel"
+        if "destino" in df_final.columns:
+            rename_final["destino"] = "destino excel"
+        if "origem_site" in df_final.columns:
+            rename_final["origem_site"] = "origem site"
+        if "destino_site" in df_final.columns:
+            rename_final["destino_site"] = "destino site"
+        if rename_final:
+            df_final = df_final.rename(columns=rename_final)
+
+        # Define a ordem exata das colunas de resultado
+        ORDEM_RESULTADO = [
+            "origem excel",
+            "destino excel",
+            "origem site",
+            "destino site",
+            "tempo_viagem",
+            "distancia_km",
+            "rota_descricao",
+            "valor_pedagio",
+            "valor_combustivel",
+            "valor_total",
+            "Tipo_Carga_Granel Sólido",
+            "Tipo_Carga_Granel Líquido",
+            "Tipo_Carga_Frigorificada",
+            "Tipo_Carga_Conteinerizada",
+            "Tipo_Carga_Carga Geral",
+            "Tipo_Carga_Neogranel",
+            "Tipo_Carga_Perigosa (granel sólido)",
+            "Tipo_Carga_Perigosa (granel líquido)",
+            "Tipo_Carga_Perigosa (frigorificada)",
+            "Tipo_Carga_Perigosa (conteinerizada)",
+            "Tipo_Carga_Perigosa (carga geral)",
+            "Tipo_Carga_Granel Pressurizada",
+            "status",
+            "fonte",
+            "consultado_em",
+            "validade_ate",
+            "erro",
+        ]
+
+        # Colunas extras do arquivo de entrada (exceto as já incluídas na ORDEM_RESULTADO)
+        colunas_entrada_extras = [
+            c for c in df_final.columns
+            if c not in ORDEM_RESULTADO
+        ]
+        # Ordem final: resultado ordenado + colunas extras do cliente no fim
+        colunas_presentes = [
+            c for c in ORDEM_RESULTADO if c in df_final.columns
+        ] + colunas_entrada_extras
+        df_final = df_final.reindex(columns=colunas_presentes)
+
         # Estiliza e salva
         with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
             df_final.to_excel(writer, index=False, sheet_name="Cotações")
@@ -149,25 +211,27 @@ class ExcelService:
 
     @staticmethod
     def _estilizar(writer, df: pd.DataFrame) -> None:
-        """Aplica formatação básica: cabeçalho verde, colunas de resultado azul."""
+        """Aplica formatação: cabeçalho azul (entrada), vermelho Real94 (resultado)."""
         try:
             from openpyxl.styles import PatternFill, Font, Alignment
             ws = writer.sheets["Cotações"]
 
-            verde = PatternFill("solid", fgColor="2E7D32")
-            azul  = PatternFill("solid", fgColor="1565C0")
-            branco = Font(color="FFFFFF", bold=True)
+            # Azul = colunas de entrada originais (origem/destino excel)
+            # Vermelho Real94 = colunas de resultado do scraper
+            azul_escuro = PatternFill("solid", fgColor="1565C0")
+            vermelho    = PatternFill("solid", fgColor="BF181B")
+            branco      = Font(color="FFFFFF", bold=True)
 
-            COLUNAS_AZUL = {
-                "origem", "destino", "status", "fonte", "tempo_viagem",
+            COLUNAS_RESULTADO = {
+                "origem site", "destino site", "status", "fonte", "tempo_viagem",
                 "distancia_km", "rota_descricao", "valor_pedagio",
                 "valor_combustivel", "valor_total", "consultado_em",
                 "validade_ate", "erro",
             }
             for cell in ws[1]:
                 col = str(cell.value or "")
-                is_resultado = col in COLUNAS_AZUL or col.startswith("Tipo_Carga_")
-                cell.fill = azul if is_resultado else verde
+                is_resultado = col in COLUNAS_RESULTADO or col.startswith("Tipo_Carga_")
+                cell.fill = vermelho if is_resultado else azul_escuro
                 cell.font = branco
                 cell.alignment = Alignment(horizontal="center")
 

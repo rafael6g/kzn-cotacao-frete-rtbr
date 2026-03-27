@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{% block title %}Cotações{% endblock %} — Rota Brasil</title>
+  <title>{% block title %}Cotações{% endblock %} — Real94</title>
 
   <!-- DaisyUI + Tailwind via CDN -->
   <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" />
@@ -17,18 +17,18 @@
   <style>
     /* ── Custom tokens ── */
     :root {
-      --green-brand: #C62828;
-      --green-light: #EF5350;
-      --green-glow: rgba(198, 40, 40, 0.35);
+      --brand: #BF181B;
+      --brand-light: #E92320;
+      --brand-glow: rgba(191, 24, 27, 0.40);
       --glass-bg: rgba(255, 255, 255, 0.04);
       --glass-border: rgba(255, 255, 255, 0.10);
-      --surface: #1a0a0a;
-      --surface-2: #200f0f;
+      --surface: #180a0a;
+      --surface-2: #1e0c0c;
     }
 
     body {
-      background-color: #110a0a;
-      color: #e8e2e2;
+      background-color: #0d0808;
+      color: #f0eded;
     }
 
     /* ── Glass card ── */
@@ -42,21 +42,21 @@
 
     /* ── Glow effect for primary buttons ── */
     .btn-brand {
-      background: var(--green-brand);
+      background: var(--brand);
       color: #fff;
       border: none;
-      box-shadow: 0 0 18px var(--green-glow);
+      box-shadow: 0 0 18px var(--brand-glow);
       transition: box-shadow 0.2s, transform 0.15s;
     }
     .btn-brand:hover {
-      background: var(--green-light);
-      box-shadow: 0 0 30px var(--green-glow);
+      background: var(--brand-light);
+      box-shadow: 0 0 30px var(--brand-glow);
       transform: translateY(-1px);
     }
 
     /* ── Input focus ring ── */
     .input:focus, .select:focus, .file-input:focus {
-      outline: 2px solid var(--green-brand);
+      outline: 2px solid var(--brand);
       outline-offset: 1px;
     }
 
@@ -78,15 +78,15 @@
 
     /* ── Navbar blur ── */
     .navbar-blur {
-      background: rgba(10, 17, 11, 0.75);
+      background: rgba(13, 8, 8, 0.85);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--glass-border);
     }
 
     /* ── Green accent text ── */
-    .text-brand { color: var(--green-light); }
-    .text-brand-dim { color: var(--green-brand); }
+    .text-brand { color: var(--brand-light); }
+    .text-brand-dim { color: var(--brand); }
 
     /* ── Section divider ── */
     .section-divider {
@@ -99,9 +99,9 @@
   <!-- Navbar -->
   <nav class="navbar navbar-blur sticky top-0 z-50 px-6 py-3">
     <div class="flex-1 flex items-center gap-3">
-      <a href="/" class="flex items-center gap-0" style="text-decoration: none;">
-        <span class="text-2xl font-extrabold tracking-tight text-white" style="letter-spacing: -0.02em;">Real</span>
-        <span class="text-2xl font-extrabold text-white px-2 py-0.5 ml-1 rounded-sm" style="background: #C62828; letter-spacing: -0.01em; line-height: 1.2;">94</span>
+      <a href="/" class="flex items-center" style="text-decoration: none; gap: 0;">
+        <span class="font-extrabold text-white" style="font-size: 1.35rem; letter-spacing: -0.03em; line-height: 1;">Real</span>
+        <span class="font-extrabold text-white" style="font-size: 1.35rem; background: #BF181B; padding: 1px 7px 2px; margin-left: 3px; border-radius: 3px; line-height: 1.25; letter-spacing: -0.01em;">94</span>
       </a>
     </div>
     <div class="flex-none flex gap-1">
