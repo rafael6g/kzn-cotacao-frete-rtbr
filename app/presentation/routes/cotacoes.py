@@ -80,6 +80,7 @@ async def index(request: Request):
         "request": request,
         "configs": configs,
         "delay_padrao": settings.delay_padrao_segundos,
+        "is_production": settings.is_production,
     })
 
 
