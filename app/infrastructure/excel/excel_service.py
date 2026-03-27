@@ -1,0 +1,156 @@
+import pandas as pd
+from pathlib import Path
+from typing import Optional
+
+from app.domain.entities.cotacao import Cotacao, StatusCotacao
+from app.core.logging_config import get_logger
+
+logger = get_logger(__name__)
+
+# Colunas adicionadas ao Excel de saída
+COLUNAS_RESULTADO = [
+    "resultado_origem",
+    "resultado_destino",
+    "resultado_status",
+    "resultado_fonte",
+    "resultado_tempo_viagem",
+    "resultado_distancia_km",
+    "resultado_rota_descricao",
+    "resultado_valor_pedagio",
+    "resultado_valor_combustivel",
+    "resultado_valor_total",
+    "resultado_valor_frete",
+    "resultado_consultado_em",
+    "resultado_erro",
+]
+
+
+class ExcelService:
+
+    def __init__(self, settings):
+        self._settings = settings
+
+    def ler_arquivo(self, caminho: str) -> list[dict]:
+        """
+        Lê Excel ou CSV e retorna lista de dicts (uma por linha).
+        Colunas esperadas mínimas: origem, destino (case-insensitive).
+        """
+        path = Path(caminho)
+        suffix = path.suffix.lower()
+
+        try:
+            if suffix in (".xlsx", ".xls"):
+                df = pd.read_excel(path, dtype=str)
+            elif suffix == ".csv":
+                df = pd.read_csv(path, dtype=str, encoding="utf-8-sig")
+            else:
+                raise ValueError(f"Formato não suportado: {suffix}")
+        except Exception as e:
+            from app.domain.exceptions import ExcelInvalidoError
+            raise ExcelInvalidoError(f"Erro ao ler arquivo: {e}")
+
+        # Normaliza nomes de colunas (lower + strip)
+        df.columns = [c.lower().strip() for c in df.columns]
+        df = df.fillna("")
+
+        # Valida colunas obrigatórias
+        obrigatorias = {"origem", "destino"}
+        faltando = obrigatorias - set(df.columns)
+        if faltando:
+            from app.domain.exceptions import ExcelInvalidoError
+            raise ExcelInvalidoError(
+                f"Colunas obrigatórias ausentes: {faltando}. "
+                f"Colunas encontradas: {list(df.columns)}"
+            )
+
+        return df.to_dict("records")
+
+    async def gerar(
+        self,
+        arquivo_entrada: str,
+        cotacoes: list[Cotacao],
+        output_path: str,
+    ) -> None:
+        """
+        Gera Excel de resultado:
+        - Mantém todas as colunas originais
+        - Adiciona colunas de resultado
+        - Ordena por linha_numero
+        """
+        path = Path(arquivo_entrada)
+        suffix = path.suffix.lower()
+
+        try:
+            if suffix in (".xlsx", ".xls"):
+                df_original = pd.read_excel(path, dtype=str)
+            else:
+                df_original = pd.read_csv(path, dtype=str, encoding="utf-8-sig")
+        except Exception as e:
+            logger.error(f"Erro ao reler arquivo original: {e}")
+            df_original = pd.DataFrame()
+
+        # Constrói DataFrame de resultados
+        cotacoes_sorted = sorted(cotacoes, key=lambda c: c.linha_numero)
+        rows = []
+        for cotacao in cotacoes_sorted:
+            row = {"_linha": cotacao.linha_numero}
+            r = cotacao.resultado
+
+            row["resultado_origem"] = cotacao.parametros.origem
+            row["resultado_destino"] = cotacao.parametros.destino
+            row["resultado_status"] = cotacao.status.value
+            row["resultado_fonte"] = cotacao.fonte.value if cotacao.fonte else ""
+            row["resultado_tempo_viagem"] = r.tempo_viagem if r else ""
+            row["resultado_distancia_km"] = r.distancia_km if r else ""
+            row["resultado_rota_descricao"] = r.rota_descricao if r else ""
+            row["resultado_valor_pedagio"] = r.valor_pedagio if r else ""
+            row["resultado_valor_combustivel"] = r.valor_combustivel if r else ""
+            row["resultado_valor_total"] = r.valor_total if r else ""
+            row["resultado_valor_frete"] = r.valor_frete if r else ""
+            row["resultado_consultado_em"] = r.consultado_em if r else ""
+            row["resultado_erro"] = cotacao.erro_mensagem or ""
+            rows.append(row)
+
+        df_resultado = pd.DataFrame(rows)
+
+        # Mescla original + resultado pelo índice de linha
+        if not df_original.empty and not df_resultado.empty:
+            df_resultado = df_resultado.rename(columns={"_linha": "_idx"})
+            df_original.index = range(len(df_original))
+            df_resultado.index = df_resultado["_idx"].apply(lambda x: x - 1)
+            df_resultado = df_resultado.drop(columns=["_idx"])
+            df_final = df_original.join(df_resultado, how="left")
+        else:
+            df_resultado = df_resultado.drop(columns=["_linha"], errors="ignore")
+            df_final = df_resultado
+
+        # Estiliza e salva
+        with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
+            df_final.to_excel(writer, index=False, sheet_name="Cotações")
+            self._estilizar(writer, df_final)
+
+        logger.info(f"Excel salvo em: {output_path}")
+
+    @staticmethod
+    def _estilizar(writer, df: pd.DataFrame) -> None:
+        """Aplica formatação básica: cabeçalho verde, colunas de resultado azul."""
+        try:
+            from openpyxl.styles import PatternFill, Font, Alignment
+            ws = writer.sheets["Cotações"]
+
+            verde = PatternFill("solid", fgColor="2E7D32")
+            azul  = PatternFill("solid", fgColor="1565C0")
+            branco = Font(color="FFFFFF", bold=True)
+
+            for cell in ws[1]:
+                col = str(cell.value or "").lower()
+                cell.fill = azul if col.startswith("resultado_") else verde
+                cell.font = branco
+                cell.alignment = Alignment(horizontal="center")
+
+            # Auto-largura de colunas
+            for col in ws.columns:
+                max_len = max((len(str(c.value or "")) for c in col), default=10)
+                ws.column_dimensions[col[0].column_letter].width = min(max_len + 2, 50)
+        except Exception as e:
+            logger.warning(f"Não foi possível estilizar o Excel: {e}")

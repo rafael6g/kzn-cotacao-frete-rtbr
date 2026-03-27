@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Histórico de Cotações{% endblock %}
+
+{% block content %}
+<div class="card bg-base-100 shadow-xl">
+  <div class="card-body">
+    <div class="flex justify-between items-center">
+      <h2 class="card-title text-green-700 text-2xl">📋 Histórico de Cotações</h2>
+      <a href="/" class="btn btn-success btn-sm">+ Nova Cotação</a>
+    </div>
+
+    <div
+      id="historico-tabela"
+      hx-get="/historico/tabela"
+      hx-trigger="every 10s"
+      hx-swap="innerHTML"
+    >
+      {% include "partials/historico_tabela.html" %}
+    </div>
+  </div>
+</div>
+{% endblock %}

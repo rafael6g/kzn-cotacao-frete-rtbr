@@ -1,0 +1,64 @@
+{% if lotes %}
+<div class="overflow-x-auto mt-4">
+  <table class="table table-zebra table-sm w-full">
+    <thead class="bg-green-700 text-white">
+      <tr>
+        <th>ID</th>
+        <th>Nome</th>
+        <th>Status</th>
+        <th>Total</th>
+        <th>Cache</th>
+        <th>Site</th>
+        <th>Erros</th>
+        <th>Progresso</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for lote in lotes %}
+      <tr>
+        <td class="font-mono text-xs text-gray-400">#{{ lote.id }}</td>
+        <td class="font-semibold">{{ lote.nome }}</td>
+        <td>
+          {% if lote.status.value == "concluido" %}
+            <span class="badge badge-success badge-sm">✓ Concluído</span>
+          {% elif lote.status.value == "processando" %}
+            <span class="badge badge-warning badge-sm animate-pulse">⏳ Processando</span>
+          {% elif lote.status.value == "erro" %}
+            <span class="badge badge-error badge-sm">✗ Erro</span>
+          {% else %}
+            <span class="badge badge-ghost badge-sm">{{ lote.status.value }}</span>
+          {% endif %}
+        </td>
+        <td class="text-center">{{ lote.total_linhas }}</td>
+        <td class="text-center text-blue-600">{{ lote.linhas_cache }}</td>
+        <td class="text-center text-green-600">{{ lote.linhas_consultadas }}</td>
+        <td class="text-center text-red-500">{{ lote.linhas_erro }}</td>
+        <td>
+          <progress
+            class="progress progress-success w-20"
+            value="{{ lote.linhas_processadas }}"
+            max="{{ lote.total_linhas or 1 }}"
+          ></progress>
+          <span class="text-xs ml-1">{{ lote.percentual }}%</span>
+        </td>
+        <td class="flex gap-1">
+          {% if lote.arquivo_saida %}
+          <a href="/cotacoes/{{ lote.id }}/download" class="btn btn-xs btn-success">📥</a>
+          {% endif %}
+          {% if lote.status.value == "processando" %}
+          <a href="/" hx-boost="true" class="btn btn-xs btn-warning">👁 Ver</a>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="text-center text-gray-400 py-10">
+  <p class="text-4xl mb-2">📭</p>
+  <p>Nenhuma cotação processada ainda.</p>
+  <a href="/" class="btn btn-success btn-sm mt-3">Criar primeira cotação</a>
+</div>
+{% endif %}

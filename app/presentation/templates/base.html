@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Cotações{% endblock %} — Rota Brasil</title>
+
+  <!-- DaisyUI + Tailwind via CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- HTMX -->
+  <script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js"></script>
+  <!-- SSE extension -->
+  <script src="https://unpkg.com/htmx.org@1.9.12/dist/ext/sse.js"></script>
+
+  <style>
+    /* ── Custom tokens ── */
+    :root {
+      --green-brand: #2E7D32;
+      --green-light: #4CAF50;
+      --green-glow: rgba(46, 125, 50, 0.35);
+      --glass-bg: rgba(255, 255, 255, 0.04);
+      --glass-border: rgba(255, 255, 255, 0.10);
+      --surface: #0f1a10;
+      --surface-2: #152016;
+    }
+
+    body {
+      background-color: #0a110b;
+      color: #e2e8e2;
+    }
+
+    /* ── Glass card ── */
+    .glass-card {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-radius: 1rem;
+    }
+
+    /* ── Glow effect for primary buttons ── */
+    .btn-brand {
+      background: var(--green-brand);
+      color: #fff;
+      border: none;
+      box-shadow: 0 0 18px var(--green-glow);
+      transition: box-shadow 0.2s, transform 0.15s;
+    }
+    .btn-brand:hover {
+      background: var(--green-light);
+      box-shadow: 0 0 30px var(--green-glow);
+      transform: translateY(-1px);
+    }
+
+    /* ── Input focus ring ── */
+    .input:focus, .select:focus, .file-input:focus {
+      outline: 2px solid var(--green-brand);
+      outline-offset: 1px;
+    }
+
+    /* ── SSE animations ── */
+    .sse-item-novo { animation: fadeSlide 0.35s ease-out; }
+    @keyframes fadeSlide {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Log box ── */
+    .log-box {
+      font-family: 'Courier New', monospace;
+      font-size: 0.75rem;
+      background: rgba(0,0,0,0.4);
+      border: 1px solid var(--glass-border);
+      border-radius: 0.5rem;
+    }
+
+    /* ── Navbar blur ── */
+    .navbar-blur {
+      background: rgba(10, 17, 11, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--glass-border);
+    }
+
+    /* ── Green accent text ── */
+    .text-brand { color: var(--green-light); }
+    .text-brand-dim { color: var(--green-brand); }
+
+    /* ── Section divider ── */
+    .section-divider {
+      border-color: var(--glass-border);
+    }
+  </style>
+</head>
+<body class="min-h-screen">
+
+  <!-- Navbar -->
+  <nav class="navbar navbar-blur sticky top-0 z-50 px-6 py-3">
+    <div class="flex-1 flex items-center gap-3">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
+        <path stroke-linecap="round" stroke-linejoin="round" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
+      </svg>
+      <a href="/" class="text-lg font-bold tracking-wider text-white">
+        Rota <span class="text-brand">Brasil</span>
+      </a>
+    </div>
+    <div class="flex-none flex gap-1">
+      <a href="/" class="btn btn-ghost btn-sm text-gray-300 hover:text-brand hover:bg-transparent">Nova Cotação</a>
+      <a href="/historico" class="btn btn-ghost btn-sm text-gray-300 hover:text-brand hover:bg-transparent">Histórico</a>
+    </div>
+  </nav>
+
+  <!-- Conteúdo principal -->
+  <main class="{% block main_class %}container mx-auto px-4 py-8 max-w-5xl{% endblock %}">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Toast de notificações globais -->
+  <div id="toast-container" class="toast toast-end z-50"></div>
+
+  <script>
+    document.body.addEventListener("htmx:afterSettle", () => {
+      document.querySelectorAll(".toast .alert").forEach(el => {
+        setTimeout(() => el.remove(), 4000);
+      });
+    });
+  </script>
+</body>
+</html>
