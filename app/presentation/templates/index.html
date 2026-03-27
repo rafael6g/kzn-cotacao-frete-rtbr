@@ -208,7 +208,7 @@
             <span class="label-text text-gray-400 text-xs font-medium">Eixos</span>
           </label>
           <select name="eixos" class="select select-bordered select-sm bg-black/30 border-white/10 text-gray-200">
-            {% for n in range(2, 10) %}
+            {% for n in range(2, 11) %}
             <option value="{{ n }}" {% if n == 6 %}selected{% endif %}>{{ n }} eixos</option>
             {% endfor %}
           </select>
