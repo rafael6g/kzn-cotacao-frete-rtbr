@@ -60,6 +60,7 @@ SEL_INPUT_COMBUSTIVEL = "#precoCombustivel"
 SEL_INPUT_CONSUMO     = "#consumo"
 SEL_SELECT_CARGA      = "#selectCarga"
 SEL_BTN_MOSTRAR_EIXO  = "#divMostrarEixo"
+SEL_SELECT_TABELA     = "#selectTabela"
 SEL_PAINEL_RESULTADO  = "#painelResults"
 SEL_CAPTCHA_V2        = "#recaptchaV2"
 
@@ -178,6 +179,7 @@ class RotasBrasilScraper(SiteScraper):
             await self._preencher_endereco(SEL_INPUT_ORIGEM, params.origem)
             await self._preencher_endereco(SEL_INPUT_DESTINO, params.destino)
             await self._preencher_combustivel(params.preco_combustivel, params.consumo_km_l)
+            await self._selecionar_tabela_frete(params.tabela_frete)
             await self._page.select_option(SEL_SELECT_CARGA, "todas")
             await self._submeter_formulario(delay_segundos=delay_segundos)
             resultado = await self._extrair_resultado()
@@ -239,6 +241,15 @@ class RotasBrasilScraper(SiteScraper):
         await self._page.fill(SEL_INPUT_CONSUMO, consumo_str)
 
         logger.debug(f"Combustível: R$ {preco_str}/L | Consumo: {consumo_str} km/L")
+
+    async def _selecionar_tabela_frete(self, tabela: str) -> None:
+        """Seleciona Tabela A/B/C/D no select#selectTabela do RotasBrasil."""
+        tabela = tabela.upper()
+        try:
+            await self._page.select_option(SEL_SELECT_TABELA, label=f"Tabela {tabela}")
+            logger.debug(f"Tabela frete '{tabela}' selecionada")
+        except Exception as e:
+            logger.warning(f"Não foi possível selecionar tabela '{tabela}': {e}")
 
     async def _selecionar_eixos(self, eixos: int) -> None:
         try:

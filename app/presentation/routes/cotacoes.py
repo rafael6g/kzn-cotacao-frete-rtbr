@@ -154,6 +154,7 @@ async def criar_cotacao(
     consumo_km_l: float = Form(...),
     veiculo: int = Form(default=2),
     modo_visivel: bool = Form(default=False),
+    tabela_frete: str = Form(default="A"),
 ):
     repo = get_xano_repository()
     excel_svc = get_excel_service()
@@ -215,6 +216,7 @@ async def criar_cotacao(
                 .replace(",", ".")
             ),
             site=site_id,
+            tabela_frete=str(linha.get("tabela_frete", tabela_frete)).strip().upper() or tabela_frete,
         )
         itens_para_criar.append(Cotacao(lote_id=lote.id, linha_numero=i, parametros=params))
 

@@ -23,6 +23,7 @@ class ParametrosRota:
     evitar_balsa: bool = False
     data_tarifa: Optional[str] = None  # formato YYYY-MM-DD
     site: str = ""  # "" = rotasbrasil (chave legada), "qualp" = qualp.com.br
+    tabela_frete: str = "A"  # "A" | "B" | "C" | "D" — ANTT Resolução 5.867/2026 (apenas QualP)
 
     def chave_cache(self) -> str:
         """SHA-256 dos parâmetros normalizados — usado como índice no Xano."""
@@ -38,6 +39,7 @@ class ParametrosRota:
             str(self.evitar_pedagio),
             str(self.evitar_balsa),
             self.data_tarifa or "",
+            self.tabela_frete.upper(),
         ])
         return hashlib.sha256(partes.encode("utf-8")).hexdigest()
 
@@ -59,4 +61,5 @@ class ParametrosRota:
             "evitar_balsa": self.evitar_balsa,
             "data_tarifa": self.data_tarifa,
             "site": self.site,
+            "tabela_frete": self.tabela_frete,
         }

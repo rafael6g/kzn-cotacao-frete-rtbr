@@ -229,8 +229,8 @@
         </div>
       </div>
 
-      <!-- Row 3: Delay -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <!-- Row 3: Delay + Tabela Frete + Tipos de Carga -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div class="form-control">
           <label class="label pb-1">
             <span class="label-text text-gray-400 text-xs font-medium">
@@ -242,6 +242,17 @@
           </label>
           <input type="number" name="delay_segundos" min="8" max="120" value="{{ delay_padrao }}" required
             class="input input-bordered input-sm bg-black/30 border-white/10 text-gray-200 focus:border-red-800" />
+        </div>
+        <div class="form-control">
+          <label class="label pb-1">
+            <span class="label-text text-gray-400 text-xs font-medium">Tabela Frete ANTT</span>
+          </label>
+          <select name="tabela_frete" class="select select-bordered select-sm bg-black/30 border-white/10 text-gray-200 focus:border-red-800">
+            <option value="A">A — Lotação (caminhão + carreta)</option>
+            <option value="B">B — Agregados (apenas veículo)</option>
+            <option value="C">C — Lotação de alto desempenho</option>
+            <option value="D">D — Agregados de alto desempenho</option>
+          </select>
         </div>
         <div class="form-control">
           <label class="label pb-1">

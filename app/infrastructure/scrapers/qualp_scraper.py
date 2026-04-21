@@ -45,6 +45,13 @@ settings = get_settings()
 
 URL_BASE = "https://qualp.com.br/#/"
 
+_TABELA_LABELS = {
+    "A": "Tabela A - Lotação",
+    "B": "Tabela B - Agregados",
+    "C": "Tabela C - Lotação de alto desempenho",
+    "D": "Tabela D - Agregados de alto desempenho",
+}
+
 _ESTADOS = {
     "AC": "Acre", "AL": "Alagoas", "AM": "Amazonas", "AP": "Amapá",
     "BA": "Bahia", "CE": "Ceará", "DF": "Distrito Federal",
@@ -226,6 +233,7 @@ class QualPScraper(SiteScraper):
         logger.info(f"QualP: consultando {params.origem} → {params.destino} | v={params.veiculo_label} eixos={params.eixos}")
 
         try:
+            self._form["_tabela_frete_pendente"] = params.tabela_frete
             await self._limpar_formulario()
             await self._selecionar_veiculo(params.veiculo)
             await self._ajustar_eixos(params.eixos)
@@ -336,6 +344,31 @@ class QualPScraper(SiteScraper):
             self._form["veiculo"] = veiculo_id
         except Exception as e:
             logger.warning(f"QualP: não foi possível selecionar veículo {veiculo_id}: {e}")
+
+    async def _selecionar_tabela_frete(self, tabela: str) -> None:
+        """Seleciona Tabela A/B/C/D no dropdown de frete ANTT do resultado QualP."""
+        tabela = tabela.upper()
+        if self._form.get("tabela_frete") == tabela:
+            return
+        label = _TABELA_LABELS.get(tabela, _TABELA_LABELS["A"])
+        try:
+            dropdown = self._page.locator(
+                "div.q-select:has-text('Tabela'), "
+                "[role='combobox']:has-text('Tabela'), "
+                ".q-field:has-text('Tabela') .q-field__native"
+            ).first
+            await dropdown.click()
+            await self._page.wait_for_timeout(_j(300))
+            opcao = self._page.locator(
+                f".q-menu .q-item:has-text('{label}'), "
+                f".q-virtual-scroll__content .q-item:has-text('{label}')"
+            ).first
+            await opcao.click()
+            await self._page.wait_for_timeout(_j(400))
+            self._form["tabela_frete"] = tabela
+            logger.debug(f"QualP: tabela frete '{label}' selecionada")
+        except Exception as e:
+            logger.warning(f"QualP: não foi possível selecionar tabela '{tabela}': {e}")
 
     async def _ler_eixos_atual(self) -> Optional[int]:
         """Lê o número de eixos atual direto do DOM (ex: input.value = '6 eixos')."""
@@ -611,6 +644,9 @@ class QualPScraper(SiteScraper):
             rota_desc = (await aba.inner_text(timeout=3000)).strip().replace("\n", " ")
         except Exception:
             rota_desc = f"ROTA 1 — {distancia}"
+
+        # Seleciona a tabela ANTT correta (A/B/C/D) antes de extrair
+        await self._selecionar_tabela_frete(self._form.pop("_tabela_frete_pendente", "A"))
 
         # Tabela ANTT: tr.q-tr sem cursor-pointer, com valor contendo "R$"
         fretes: dict[str, str] = {}

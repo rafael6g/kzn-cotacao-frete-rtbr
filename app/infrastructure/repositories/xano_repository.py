@@ -272,6 +272,7 @@ class XanoRepository(CotacaoRepository):
             consumo_km_l=params_dict.get("consumo_km_l", 0),
             tipo_carga=params_dict.get("tipo_carga", "todas"),
             site=params_dict.get("site", ""),
+            tabela_frete=params_dict.get("tabela_frete", "A"),
         )
         resultado = None
         if d.get("resultado"):

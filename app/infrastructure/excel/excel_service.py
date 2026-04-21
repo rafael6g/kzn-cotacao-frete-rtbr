@@ -104,6 +104,7 @@ class ExcelService:
             row["resultado_param_eixos"] = cotacao.parametros.eixos
             row["resultado_param_preco_combustivel"] = cotacao.parametros.preco_combustivel
             row["resultado_param_consumo_km_l"] = cotacao.parametros.consumo_km_l
+            row["resultado_param_tabela_frete"] = getattr(cotacao.parametros, "tabela_frete", "A")
             row["resultado_status"] = cotacao.status.value
             row["resultado_fonte"] = cotacao.fonte.value if cotacao.fonte else ""
             row["resultado_tempo_viagem"] = r.tempo_viagem if r else ""
@@ -176,6 +177,7 @@ class ExcelService:
             "param_eixos",
             "param_preco_combustivel",
             "param_consumo_km_l",
+            "param_tabela_frete",
             "tempo_viagem",
             "distancia_km",
             "rota_descricao",
@@ -235,7 +237,7 @@ class ExcelService:
             COLUNAS_RESULTADO = {
                 "origem site", "destino site",
                 "param_site", "param_veiculo", "param_eixos",
-                "param_preco_combustivel", "param_consumo_km_l",
+                "param_preco_combustivel", "param_consumo_km_l", "param_tabela_frete",
                 "status", "fonte", "tempo_viagem",
                 "distancia_km", "rota_descricao", "valor_pedagio",
                 "valor_combustivel", "valor_total", "consultado_em",
