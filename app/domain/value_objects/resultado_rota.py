@@ -14,7 +14,8 @@ class ResultadoRota:
     valor_pedagio: str          # ex: "R$ 207,00"
     valor_combustivel: str      # ex: "R$ 1.119,91"
     valor_total: str            # ex: "R$ 1.326,91"
-    fretes: dict = field(default_factory=dict)   # ex: {"Tipo_Carga_Carga Geral": "R$ 3.511,62", ...}
+    fretes: dict = field(default_factory=dict)    # ex: {"Carga Geral": "R$ 3.511,62", ...}
+    pedagios: list = field(default_factory=list)  # ex: [{"nome": "P3 - Jacarezinho", "rodovia": "BR-369 - KM 1.500", "tarifa": "R$64,00", "por_eixo": "12,80 eixo"}]
     consultado_em: str = ""     # ISO datetime da consulta
     expira_em_iso: str = ""     # Data de expiração do cache (DD/MM/AAAA HH:MM), injetado pelo repo
 
@@ -27,6 +28,7 @@ class ResultadoRota:
             "valor_combustivel": self.valor_combustivel,
             "valor_total": self.valor_total,
             "fretes": self.fretes,
+            "pedagios": self.pedagios,
             "consultado_em": self.consultado_em,
         }
 
@@ -39,7 +41,8 @@ class ResultadoRota:
             valor_pedagio=data.get("valor_pedagio", ""),
             valor_combustivel=data.get("valor_combustivel", ""),
             valor_total=data.get("valor_total", ""),
-            fretes=data.get("fretes", {}),        # compatível com cache antigo
+            fretes=data.get("fretes", {}),
+            pedagios=data.get("pedagios", []),
             consultado_em=data.get("consultado_em", ""),
             expira_em_iso=data.get("expira_em_iso", ""),
         )

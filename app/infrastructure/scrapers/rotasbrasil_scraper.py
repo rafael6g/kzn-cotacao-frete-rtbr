@@ -224,7 +224,7 @@ class RotasBrasilScraper(SiteScraper):
 
         try:
             loc = self._page.locator(".ui-autocomplete .ui-menu-item").first
-            await loc.wait_for(state="visible", timeout=5000)
+            await loc.wait_for(state="visible", timeout=1000)
             sugestao = (await loc.inner_text()).strip()
             await loc.click()
             logger.debug(f"Autocomplete: clicou em '{sugestao[:50]}' para: {endereco}")

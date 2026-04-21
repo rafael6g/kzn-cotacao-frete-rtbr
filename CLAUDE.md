@@ -11,10 +11,26 @@ Python 3.11 + FastAPI + Uvicorn (1 worker) + Playwright/Chromium + Pandas/openpy
 ```bash
 # Always use the venv Python
 .venv/Scripts/python main.py                 # Dev server at http://localhost:8000
-.venv/Scripts/python diagnostico_scraper.py  # Run scraper diagnostic (single route)
+.venv/Scripts/python diagnostico_scraper.py  # Diagnóstico RotasBrasil (rota única, headless=False)
+.venv/Scripts/python diagnostico_qualp.py    # Diagnóstico QualP (rota única, headless=False)
+.venv/Scripts/python teste_eixos_qualp.py 9  # Teste isolado de ajuste de eixos no QualP
 .venv/Scripts/pip install -r requirements.txt
 .venv/Scripts/playwright install chromium
 ```
+
+## Diagnósticos (scripts de teste visual)
+
+Quando o usuário pedir para testar algo, **adicionar o passo ao script de diagnóstico correspondente** em vez de criar um teste separado. Os diagnósticos são a forma preferida de validar comportamento do scraper.
+
+- `diagnostico_qualp.py` — testa o fluxo completo do QualP passo a passo com tempo por etapa e extração de: dados da rota, tabela frete ANTT (12 tipos), praças de pedágio (nome, tarifa, por eixo, rodovia/km)
+- `diagnostico_scraper.py` — testa o fluxo completo do RotasBrasil
+- `teste_eixos_qualp.py` — teste isolado para ajuste de eixos (aceita número via argumento)
+
+Formato de saída dos diagnósticos:
+```
+[NN] Descrição do passo...    OK/ERRO  Xs  (detalhe)
+```
+Cada passo mostra tempo real — útil para identificar onde otimizar.
 
 The server must **not** be started or stopped by Claude — the user manages the server process.
 

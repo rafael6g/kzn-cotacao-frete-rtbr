@@ -173,7 +173,7 @@
           <label class="label pb-1">
             <span class="label-text text-gray-300 text-sm font-medium">Tipo de Consulta <span class="text-red-400">*</span></span>
           </label>
-          <select name="config_id" class="select select-bordered select-sm bg-black/30 border-white/10 text-gray-200 focus:border-red-800" required>
+          <select id="select-site" name="config_id" class="select select-bordered select-sm bg-black/30 border-white/10 text-gray-200 focus:border-red-800" required onchange="toggleTabelaFrete()">
             {% for config in configs %}
             <option value="{{ config.id }}">{{ config.nome }}{% if config.descricao %} — {{ config.descricao }}{% endif %}</option>
             {% else %}
@@ -243,7 +243,7 @@
           <input type="number" name="delay_segundos" min="8" max="120" value="{{ delay_padrao }}" required
             class="input input-bordered input-sm bg-black/30 border-white/10 text-gray-200 focus:border-red-800" />
         </div>
-        <div class="form-control">
+        <div id="bloco-tabela-frete" class="form-control">
           <label class="label pb-1">
             <span class="label-text text-gray-400 text-xs font-medium">Tabela Frete ANTT</span>
           </label>
@@ -360,6 +360,7 @@
 </div>
 
 <script>
+
   var _timerInterval = null;
 
   function abrirModalProgresso() {

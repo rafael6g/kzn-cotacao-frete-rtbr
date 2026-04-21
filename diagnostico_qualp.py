@@ -9,14 +9,53 @@ from pathlib import Path
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeout
 
 # ── Configuração ──────────────────────────────────────────────────────
+import random
+import sys
+
 USUARIO  = "ti@real94.com.br"
 SENHA    = "Real3636@@"
-ORIGEM   = "Londrina, Parana, Brasil"
-DESTINO  = "Sao Paulo, Sao Paulo, Brasil"
-VEICULO  = 2      # 1=Carro 2=Caminhão 3=Ônibus 4=Moto
-EIXOS    = 5
-CONSUMO  = 2.50
-PRECO    = 7.25
+VEICULO       = 2      # 1=Carro 2=Caminhão 3=Ônibus 4=Moto
+EIXOS         = 5
+CONSUMO       = 2.50
+PRECO         = 7.25
+TABELA_FRETE  = "B"   # "A" | "B" | "C" | "D"
+
+_CIDADES = [
+    "Londrina, Parana, Brasil",
+    "Curitiba, Parana, Brasil",
+    "Maringa, Parana, Brasil",
+    "Cascavel, Parana, Brasil",
+    "Ponta Grossa, Parana, Brasil",
+    "Sao Paulo, Sao Paulo, Brasil",
+    "Campinas, Sao Paulo, Brasil",
+    "Ribeirao Preto, Sao Paulo, Brasil",
+    "Santos, Sao Paulo, Brasil",
+    "Belo Horizonte, Minas Gerais, Brasil",
+    "Uberlandia, Minas Gerais, Brasil",
+    "Porto Alegre, Rio Grande do Sul, Brasil",
+    "Caxias do Sul, Rio Grande do Sul, Brasil",
+    "Florianopolis, Santa Catarina, Brasil",
+    "Joinville, Santa Catarina, Brasil",
+    "Goiania, Goias, Brasil",
+    "Brasilia, Distrito Federal, Brasil",
+    "Salvador, Bahia, Brasil",
+    "Recife, Pernambuco, Brasil",
+    "Fortaleza, Ceara, Brasil",
+]
+
+# Uso: python diagnostico_qualp.py [Nletra]  ex: 5a  9b  2c
+# Origem e destino sempre aleatórios da lista acima
+_par = random.sample(_CIDADES, 2)
+ORIGEM, DESTINO = _par[0], _par[1]
+
+if len(sys.argv) >= 2:
+    import re as _re
+    _m = _re.match(r"(\d+)([abcdABCD])", sys.argv[1])
+    if _m:
+        EIXOS        = int(_m.group(1))
+        TABELA_FRETE = _m.group(2).upper()
+    else:
+        EIXOS = int(sys.argv[1])
 SESSION  = ".qualp_session.json"
 URL_BASE = "https://qualp.com.br/#/"
 
@@ -176,26 +215,34 @@ async def main():
     except Exception as e:
         falhou(t, str(e))
 
-    # Eixos
+    # Eixos — clica nos botões via JS (setter Vue não dispara reatividade)
+    # prepend = diminuir | append = aumentar
     t = passo(f"Ajusta eixos para {EIXOS}...")
     try:
-        atual = await page.evaluate(r"() => { const inp = Array.from(document.querySelectorAll('input')).find(i => /^\d+ eixos$/.test(i.value)); return inp ? parseInt(inp.value) : 6; }")
-        if atual == EIXOS:
-            ok(t, f"ja estava em {atual}")
+        atual = await page.evaluate(r"() => { for (const inp of document.querySelectorAll('input')) { const m = inp.value.match(/^(\d+)\s*eixos?$/i); if (m) return parseInt(m[1]); } return null; }")
+        if atual is None:
+            falhou(t, "campo eixos não encontrado")
+        elif atual == EIXOS:
+            ok(t, f"já estava em {atual}")
         else:
-            await page.evaluate(f"""
-                () => {{
-                    const inp = Array.from(document.querySelectorAll('input'))
-                        .find(i => /^\\d+ eixos$/.test(i.value));
-                    if (!inp) return;
-                    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-                    setter.call(inp, '{EIXOS} eixos');
-                    inp.dispatchEvent(new Event('input', {{bubbles: true}}));
-                    inp.dispatchEvent(new Event('change', {{bubbles: true}}));
-                }}
-            """)
-            await page.wait_for_timeout(300)
-            novo = await page.evaluate(r"() => { const inp = Array.from(document.querySelectorAll('input')).find(i => /^\d+ eixos$/.test(i.value)); return inp ? inp.value : '?'; }")
+            aumentar = EIXOS > atual
+            for _ in range(abs(EIXOS - atual)):
+                await page.evaluate("""
+                    (aumentar) => {
+                        for (const inp of document.querySelectorAll('input')) {
+                            if (/eixos?/i.test(inp.value)) {
+                                const ctrl = inp.closest('.q-field__control');
+                                if (!ctrl) return;
+                                const sel = aumentar ? '.q-field__append' : '.q-field__prepend';
+                                const icon = ctrl.querySelector(sel + ' i.cursor-pointer');
+                                if (icon) icon.click();
+                                return;
+                            }
+                        }
+                    }
+                """, aumentar)
+                await page.wait_for_timeout(200)
+            novo = await page.evaluate(r"() => { for (const inp of document.querySelectorAll('input')) { const m = inp.value.match(/^(\d+)\s*eixos?$/i); if (m) return inp.value; } return '?'; }")
             ok(t, f"{atual} eixos -> {novo}")
     except Exception as e:
         falhou(t, str(e))
@@ -218,13 +265,30 @@ async def main():
     t = passo(f"Digita preco combustivel ({PRECO})...")
     preco_str = f"{PRECO:.2f}".replace(".", ",")
     try:
-        campo = page.get_by_role("textbox", name="Preco")
-        await campo.wait_for(state="visible", timeout=5000)
-        await campo.click(click_count=3, force=True)
-        await page.wait_for_timeout(200)
-        await campo.type(preco_str, delay=80)
-        await page.wait_for_timeout(300)
-        ok(t, f"campo='{await campo.input_value()}'")
+        campo = page.get_by_role("textbox", name="Preço")  # acento obrigatório
+        preenchido = False
+        try:
+            await campo.wait_for(state="visible", timeout=5000)
+            await campo.click(click_count=3, force=True)
+            await page.wait_for_timeout(200)
+            await campo.type(preco_str, delay=80)
+            await page.wait_for_timeout(300)
+            ok(t, f"campo='{await campo.input_value()}'")
+            preenchido = True
+        except Exception:
+            pass
+        if not preenchido:
+            # Fallback: input[type='tel'] posição 1 (0=consumo, 1=preço)
+            inputs_tel = page.locator("input[type='tel']")
+            if await inputs_tel.count() >= 2:
+                f = inputs_tel.nth(1)
+                await f.click(click_count=3, force=True)
+                await page.wait_for_timeout(200)
+                await f.type(preco_str, delay=80)
+                await page.wait_for_timeout(300)
+                ok(t, f"fallback tel campo='{await f.input_value()}'")
+            else:
+                falhou(t, "campo não encontrado (nem tel fallback)")
     except Exception as e:
         falhou(t, str(e))
 
@@ -245,7 +309,8 @@ async def main():
     t = passo("Seleciona sugestao origem...")
     try:
         painel = page.locator(".waypoints-location-drawer")
-        await painel.wait_for(state="visible", timeout=5000)
+        await painel.wait_for(state="visible", timeout=2000)
+        await page.wait_for_timeout(200)
         sugestoes = page.locator(".waypoints-location-drawer .q-scrollarea__content > div")
         count = await sugestoes.count()
         cidade = ORIGEM.split(",")[0].strip().lower()
@@ -255,10 +320,12 @@ async def main():
             if txt.count(cidade) >= 2:
                 alvo = i; break
         await sugestoes.nth(alvo).click()
-        await page.wait_for_timeout(800)
+        await page.wait_for_timeout(200)
         ok(t, f"{count} sugestoes, indice {alvo}")
-    except Exception as e:
-        falhou(t, str(e))
+    except Exception:
+        await page.keyboard.press("Enter")
+        await page.wait_for_timeout(200)
+        ok(t, "fallback Enter")
 
     # Destino
     t = passo(f"Digita destino ({DESTINO.split(',')[0]})...")
@@ -283,7 +350,8 @@ async def main():
     t = passo("Seleciona sugestao destino...")
     try:
         painel = page.locator(".waypoints-location-drawer")
-        await painel.wait_for(state="visible", timeout=5000)
+        await painel.wait_for(state="visible", timeout=2000)
+        await page.wait_for_timeout(200)
         sugestoes = page.locator(".waypoints-location-drawer .q-scrollarea__content > div")
         count = await sugestoes.count()
         cidade = DESTINO.split(",")[0].strip().lower()
@@ -293,17 +361,19 @@ async def main():
             if txt.count(cidade) >= 2:
                 alvo = i; break
         await sugestoes.nth(alvo).click()
-        await page.wait_for_timeout(800)
+        await page.wait_for_timeout(200)
         ok(t, f"{count} sugestoes, indice {alvo}")
-    except Exception as e:
-        falhou(t, str(e))
+    except Exception:
+        await page.keyboard.press("Enter")
+        await page.wait_for_timeout(200)
+        ok(t, "fallback Enter")
 
     # CALCULAR
     t = passo("Clica CALCULAR...")
     try:
         btn = page.locator("button:has-text('CALCULAR')").first
-        await btn.wait_for(state="visible", timeout=5000)
-        await btn.click()
+        await btn.wait_for(state="attached", timeout=5000)
+        await btn.click(force=True)
         ok(t)
     except Exception as e:
         falhou(t, str(e))
@@ -313,6 +383,24 @@ async def main():
     try:
         await page.locator("div.route-table").first.wait_for(state="visible", timeout=30000)
         ok(t)
+    except Exception as e:
+        falhou(t, str(e))
+
+    # Tabela Frete A/B/C/D
+    _TABELA_LABELS = {
+        "A": "Tabela A - Lotação",
+        "B": "Tabela B - Agregados",
+        "C": "Tabela C - Lotação de alto desempenho",
+        "D": "Tabela D - Agregados de alto desempenho",
+    }
+    t = passo(f"Seleciona tabela frete ({TABELA_FRETE})...")
+    try:
+        label = _TABELA_LABELS.get(TABELA_FRETE.upper(), _TABELA_LABELS["A"])
+        await page.locator("label.freight-table").first.locator(".q-field__control").click()
+        await page.wait_for_timeout(400)
+        await page.locator(f".q-menu .q-item:has-text('{label}')").first.click()
+        await page.wait_for_timeout(400)
+        ok(t, label)
     except Exception as e:
         falhou(t, str(e))
 
@@ -328,11 +416,49 @@ async def main():
                 return (await filhos.last.inner_text(timeout=2000)).strip() if cnt > 0 else ""
             except Exception:
                 return ""
-        duracao     = await _label("Duracao")
-        distancia   = await _label("Distancia")
-        pedagio     = await _label("Pedagio")
-        combustivel = await _label("Combustivel")
+        duracao     = await _label("Duração")
+        distancia   = await _label("Distância")
+        pedagio     = await _label("Pedágio")
+        combustivel = await _label("Combustível")
         total       = await _label("Custo Total")
+        # Tabela frete ANTT — tr.q-tr SEM cursor-pointer (excluir praças de pedágio)
+        linhas_frete = []
+        rows = page.locator("tr.q-tr")
+        for i in range(await rows.count()):
+            row = rows.nth(i)
+            cls = await row.get_attribute("class") or ""
+            if "cursor-pointer" in cls:
+                continue
+            cols = row.locator("td.q-td")
+            if await cols.count() >= 2:
+                carga = (await cols.nth(0).inner_text()).strip()
+                valor = (await cols.nth(1).inner_text()).strip().replace("\xa0", "")
+                if "R$" in valor:
+                    # Valores zerados (R$ 0,00) exibe como "0"
+                    import re as _re
+                    num = _re.sub(r"[^\d,]", "", valor).replace(",", ".")
+                    valor_fmt = "0" if (not num or float(num) == 0) else valor
+                    linhas_frete.append((carga, valor_fmt))
+
+        # Praças de pedágio — tr.q-tr COM cursor-pointer, dentro de card-tolls
+        pedagios = []
+        toll_rows = page.locator("div.card-tolls tr.q-tr.cursor-pointer")
+        for i in range(await toll_rows.count()):
+            cols = toll_rows.nth(i).locator("td.q-td")
+            if await cols.count() >= 2:
+                col0 = await cols.nth(0).inner_text()
+                col1 = await cols.nth(1).inner_text()
+                # col0: "P3 - Jacarezinho\nBR-369 - KM 1.500"
+                partes0 = [p.strip() for p in col0.strip().splitlines() if p.strip()]
+                nome = partes0[0] if partes0 else ""
+                rodovia = partes0[1] if len(partes0) > 1 else ""
+                # col1: "R$ 64,00\n (12,80 eixo)"
+                partes1 = [p.strip() for p in col1.strip().splitlines() if p.strip()]
+                tarifa = partes1[0].replace("\xa0", "") if partes1 else ""
+                por_eixo = partes1[1].strip("() ") if len(partes1) > 1 else ""
+                if nome and tarifa:
+                    pedagios.append((nome, rodovia, tarifa, por_eixo))
+
         ok(t)
         print()
         print("  --- Resultado -----------------------------------")
@@ -341,6 +467,14 @@ async def main():
         print(f"  Pedagio    : {pedagio}")
         print(f"  Combustivel: {combustivel}")
         print(f"  Custo Total: {total}")
+        if linhas_frete:
+            print("  --- Tabela Frete ANTT ---------------------------")
+            for carga, valor in linhas_frete:
+                print(f"  {carga:<30} {valor}")
+        if pedagios:
+            print(f"  --- Praças de Pedágio ({len(pedagios)}) -----------------------")
+            for nome, rodovia, tarifa, por_eixo in pedagios:
+                print(f"  {nome:<30} {tarifa:>12}  {por_eixo}  {rodovia}")
         print("  -------------------------------------------------")
     except Exception as e:
         falhou(t, str(e))

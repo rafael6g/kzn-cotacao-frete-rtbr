@@ -352,18 +352,11 @@ class QualPScraper(SiteScraper):
             return
         label = _TABELA_LABELS.get(tabela, _TABELA_LABELS["A"])
         try:
-            dropdown = self._page.locator(
-                "div.q-select:has-text('Tabela'), "
-                "[role='combobox']:has-text('Tabela'), "
-                ".q-field:has-text('Tabela') .q-field__native"
-            ).first
-            await dropdown.click()
-            await self._page.wait_for_timeout(_j(300))
-            opcao = self._page.locator(
-                f".q-menu .q-item:has-text('{label}'), "
-                f".q-virtual-scroll__content .q-item:has-text('{label}')"
-            ).first
-            await opcao.click()
+            # Clica no q-field__control do primeiro .freight-table (Tabela A/B/C/D)
+            # — NÃO em #freight-select (div interno sem evento de abertura)
+            await self._page.locator("label.freight-table").first.locator(".q-field__control").click()
+            await self._page.wait_for_timeout(_j(400))
+            await self._page.locator(f".q-menu .q-item:has-text('{label}')").first.click()
             await self._page.wait_for_timeout(_j(400))
             self._form["tabela_frete"] = tabela
             logger.debug(f"QualP: tabela frete '{label}' selecionada")
@@ -383,6 +376,13 @@ class QualPScraper(SiteScraper):
         """)
 
     async def _ajustar_eixos(self, eixos_desejados: int) -> None:
+        """
+        Estrutura real do campo (inspecionada via F12):
+          q-field__control
+            q-field__prepend > i.cursor-pointer > SVG  ← DIMINUIR (seta p/ baixo)
+            q-field__control-container > input[value="N eixos"]
+            q-field__append  > i.cursor-pointer > SVG  ← AUMENTAR (seta p/ cima)
+        """
         try:
             atual = await self._ler_eixos_atual()
             if atual is None:
@@ -395,13 +395,24 @@ class QualPScraper(SiteScraper):
             if diferenca == 0:
                 return
 
-            # Clica nos botões arrow do stepper Quasar — atualiza o model Vue corretamente
-            icon = "keyboard_arrow_up" if diferenca > 0 else "keyboard_arrow_down"
-            btn = self._page.locator(f"i:text-is('{icon}')").first
-            await btn.wait_for(state="visible", timeout=5000)
-
+            # input.value é propriedade DOM Vue, não atributo HTML — CSS [value*=] não funciona.
+            # Usa JS para localizar o input pelo valor, sobe até .q-field__control e clica no ícone.
+            aumentar = diferenca > 0
             for _ in range(abs(diferenca)):
-                await btn.click()
+                await self._page.evaluate("""
+                    (aumentar) => {
+                        for (const inp of document.querySelectorAll('input')) {
+                            if (/eixos?/i.test(inp.value)) {
+                                const ctrl = inp.closest('.q-field__control');
+                                if (!ctrl) return;
+                                const sel = aumentar ? '.q-field__append' : '.q-field__prepend';
+                                const icon = ctrl.querySelector(sel + ' i.cursor-pointer');
+                                if (icon) icon.click();
+                                return;
+                            }
+                        }
+                    }
+                """, aumentar)
                 await self._page.wait_for_timeout(_j(150))
 
             resultado = await self._ler_eixos_atual()
@@ -666,12 +677,32 @@ class QualPScraper(SiteScraper):
         except Exception as e:
             logger.warning(f"QualP: erro ao extrair tabela frete: {e}")
 
+        # Praças de pedágio: tr.q-tr.cursor-pointer dentro de div.card-tolls
+        pedagios: list[dict] = []
+        try:
+            toll_rows = await page.query_selector_all("div.card-tolls tr.q-tr.cursor-pointer")
+            for row in toll_rows:
+                cells = await row.query_selector_all("td.q-td")
+                if len(cells) >= 2:
+                    col0 = (await cells[0].inner_text()).strip().splitlines()
+                    col1 = (await cells[1].inner_text()).strip().splitlines()
+                    col0 = [p.strip() for p in col0 if p.strip()]
+                    col1 = [p.strip() for p in col1 if p.strip()]
+                    nome     = col0[0] if col0 else ""
+                    rodovia  = col0[1] if len(col0) > 1 else ""
+                    tarifa   = col1[0].replace("\xa0", "") if col1 else ""
+                    por_eixo = col1[1].strip("() ") if len(col1) > 1 else ""
+                    if nome and tarifa:
+                        pedagios.append({"nome": nome, "rodovia": rodovia, "tarifa": tarifa, "por_eixo": por_eixo})
+        except Exception as e:
+            logger.warning(f"QualP: erro ao extrair praças de pedágio: {e}")
+
         if not distancia and not pedagio:
             raise ResultadoNaoEncontradoError("QualP: nenhum dado extraído do resultado.")
 
         logger.info(
             f"QualP: extraído — distância={distancia} pedágio={pedagio} "
-            f"combustível={combustivel} total={custo_total} fretes={len(fretes)}"
+            f"combustível={combustivel} total={custo_total} fretes={len(fretes)} praças={len(pedagios)}"
         )
 
         return ResultadoRota(
@@ -682,5 +713,6 @@ class QualPScraper(SiteScraper):
             valor_combustivel=combustivel,
             valor_total=custo_total,
             fretes=fretes,
+            pedagios=pedagios,
             consultado_em=datetime.now(timezone.utc).isoformat(),
         )

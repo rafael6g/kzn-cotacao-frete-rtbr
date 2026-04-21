@@ -133,6 +133,14 @@ class ExcelService:
             # Colunas dinâmicas — um campo por tipo de carga (ex: "Tipo_Carga_Carga Geral")
             for tipo, val in (r.fretes.items() if r else {}.items()):
                 row[tipo] = val
+            # Praças de pedágio — formato: "P3 - Jacarezinho | R$64,00 (12,80 eixo) | BR-369 - KM 1.500"
+            if r and r.pedagios:
+                row["resultado_pedagios"] = "\n".join(
+                    f"{p['nome']} | {p['tarifa']} ({p['por_eixo']}) | {p['rodovia']}"
+                    for p in r.pedagios
+                )
+            else:
+                row["resultado_pedagios"] = ""
             row["resultado_erro"] = cotacao.erro_mensagem or ""
             rows.append(row)
 
@@ -196,6 +204,7 @@ class ExcelService:
             "Tipo_Carga_Perigosa (conteinerizada)",
             "Tipo_Carga_Perigosa (carga geral)",
             "Tipo_Carga_Granel Pressurizada",
+            "pedagios",
             "status",
             "fonte",
             "consultado_em",
@@ -241,7 +250,7 @@ class ExcelService:
                 "status", "fonte", "tempo_viagem",
                 "distancia_km", "rota_descricao", "valor_pedagio",
                 "valor_combustivel", "valor_total", "consultado_em",
-                "validade_ate", "erro",
+                "validade_ate", "erro", "pedagios",
             }
             for cell in ws[1]:
                 col = str(cell.value or "")
