@@ -176,7 +176,7 @@
           </label>
           <select id="select-site" name="config_id" class="select select-bordered select-sm bg-black/30 border-white/10 text-gray-200 focus:border-red-800" required onchange="atualizarTabelaFrete()">
             {% for config in configs %}
-            <option value="{{ config.id }}">{{ config.nome }}{% if config.descricao %} — {{ config.descricao }}{% endif %}</option>
+            <option value="{{ config.id }}" data-url="{{ config.url_base }}">{{ config.nome }}{% if config.descricao %} — {{ config.descricao }}{% endif %}</option>
             {% else %}
             <option disabled>Nenhuma configuração cadastrada</option>
             {% endfor %}
@@ -414,9 +414,9 @@
     var sel = document.getElementById('select-site');
     var tabSel = document.getElementById('select-tabela-frete');
     if (!sel || !tabSel) return;
-    var txt = (sel.options[sel.selectedIndex]?.text || '').toLowerCase();
-    var isAntt  = txt.includes('antt');
-    var isQualp = txt.includes('qualp');
+    var url = (sel.options[sel.selectedIndex]?.dataset?.url || '').toLowerCase();
+    var isAntt  = url.includes('antt.gov.br');
+    var isQualp = url.includes('qualp.com.br');
     var opcoes  = isAntt ? _TABELAS_ANTT : isQualp ? _TABELAS_QUALP : _TABELAS_ROTABRASIL;
     var atual   = tabSel.value;
     tabSel.innerHTML = opcoes.map(function(o) {
