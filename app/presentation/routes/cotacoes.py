@@ -386,38 +386,13 @@ async def download_excel(lote_id: int):
     caminho = Path(settings.outputs_dir) / lote.arquivo_saida
 
     if not caminho.exists():
-        # Tenta regenerar a partir do snapshot salvo no Xano
-        dados = await repo.buscar_historico(lote_id)
-        if not dados:
-            raise HTTPException(404, "Arquivo expirado e histórico não encontrado.")
-
-        from app.domain.entities.cotacao import Cotacao, StatusCotacao, FonteResultado
-        from app.domain.value_objects.parametros_rota import ParametrosRota
-        from app.domain.value_objects.resultado_rota import ResultadoRota
         from app.application.use_cases.gerar_excel import GerarExcelUseCase
 
-        cotacoes_regen = []
-        for row in dados:
-            p = row.get("parametros", {})
-            r = row.get("resultado")
-            cotacoes_regen.append(Cotacao(
-                lote_id=lote_id,
-                linha_numero=row.get("linha_numero", 0),
-                parametros=ParametrosRota(
-                    origem=p.get("origem", ""),
-                    destino=p.get("destino", ""),
-                    veiculo=p.get("veiculo", 2),
-                    eixos=p.get("eixos", 6),
-                    preco_combustivel=p.get("preco_combustivel", 0),
-                    consumo_km_l=p.get("consumo_km_l", 0),
-                    tipo_carga=p.get("tipo_carga", "todas"),
-                    site=p.get("site", ""),
-                ),
-                resultado=ResultadoRota.from_dict(r) if r else None,
-                status=StatusCotacao(row.get("status", "aguardando")),
-                fonte=FonteResultado(row["fonte"]) if row.get("fonte") else None,
-                erro_mensagem=row.get("erro_mensagem"),
-            ))
+        # 1. Tenta snapshot do historico_excel
+        # 2. Fallback: reconstrói dos item_cotacao no Xano (funciona para todos os lotes)
+        cotacoes_regen = await repo.listar_itens_lote(lote_id)
+        if not cotacoes_regen:
+            raise HTTPException(404, "Sem dados para regenerar o arquivo.")
 
         excel_svc = get_excel_service()
         gerar = GerarExcelUseCase(excel_svc)
