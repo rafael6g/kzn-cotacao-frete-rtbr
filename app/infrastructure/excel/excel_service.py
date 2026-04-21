@@ -78,16 +78,19 @@ class ExcelService:
         - Adiciona colunas de resultado
         - Ordena por linha_numero
         """
-        path = Path(arquivo_entrada)
-        suffix = path.suffix.lower()
+        path = Path(arquivo_entrada) if arquivo_entrada else None
+        suffix = path.suffix.lower() if path else ""
 
-        try:
-            if suffix in (".xlsx", ".xls"):
-                df_original = pd.read_excel(path, dtype=str)
-            else:
-                df_original = pd.read_csv(path, dtype=str, encoding="utf-8-sig")
-        except Exception as e:
-            logger.error(f"Erro ao reler arquivo original: {e}")
+        if path and path.is_file():
+            try:
+                if suffix in (".xlsx", ".xls"):
+                    df_original = pd.read_excel(path, dtype=str)
+                else:
+                    df_original = pd.read_csv(path, dtype=str, encoding="utf-8-sig")
+            except Exception as e:
+                logger.error(f"Erro ao reler arquivo original: {e}")
+                df_original = pd.DataFrame()
+        else:
             df_original = pd.DataFrame()
 
         # Constrói DataFrame de resultados
