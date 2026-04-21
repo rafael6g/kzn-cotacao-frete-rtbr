@@ -18,7 +18,6 @@ from fastapi import (
     UploadFile,
     File,
     Form,
-    BackgroundTasks,
     Depends,
     HTTPException,
 )
@@ -362,7 +361,7 @@ async def stream_progresso(lote_id: int):
 # ── Download do Excel gerado ─────────────────────────────────────────
 
 @router.get("/cotacoes/{lote_id}/download")
-async def download_excel(lote_id: int, background_tasks: BackgroundTasks):
+async def download_excel(lote_id: int):
     repo = get_xano_repository()
     lote = await repo.buscar_lote(lote_id)
 
@@ -372,14 +371,6 @@ async def download_excel(lote_id: int, background_tasks: BackgroundTasks):
     caminho = Path(settings.outputs_dir) / lote.arquivo_saida
     if not caminho.exists():
         raise HTTPException(404, "Arquivo expirado ou removido.")
-
-    def _deletar_output(path: Path) -> None:
-        try:
-            path.unlink(missing_ok=True)
-        except Exception:
-            pass
-
-    background_tasks.add_task(_deletar_output, caminho)
 
     return FileResponse(
         path=str(caminho),
