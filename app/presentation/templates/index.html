@@ -173,7 +173,7 @@
           <label class="label pb-1">
             <span class="label-text text-gray-300 text-sm font-medium">Tipo de Consulta <span class="text-red-400">*</span></span>
           </label>
-          <select id="select-site" name="config_id" class="select select-bordered select-sm bg-black/30 border-white/10 text-gray-200 focus:border-red-800" required onchange="toggleTabelaFrete()">
+          <select id="select-site" name="config_id" class="select select-bordered select-sm bg-black/30 border-white/10 text-gray-200 focus:border-red-800" required onchange="atualizarTabelaFrete()">
             {% for config in configs %}
             <option value="{{ config.id }}">{{ config.nome }}{% if config.descricao %} — {{ config.descricao }}{% endif %}</option>
             {% else %}
@@ -247,7 +247,7 @@
           <label class="label pb-1">
             <span class="label-text text-gray-400 text-xs font-medium">Tabela Frete ANTT</span>
           </label>
-          <select name="tabela_frete" class="select select-bordered select-sm bg-black/30 border-white/10 text-gray-200 focus:border-red-800">
+          <select id="select-tabela-frete" name="tabela_frete" class="select select-bordered select-sm bg-black/30 border-white/10 text-gray-200 focus:border-red-800">
             <option value="A">A — Lotação (caminhão + carreta)</option>
             <option value="B">B — Agregados (apenas veículo)</option>
             <option value="C">C — Lotação de alto desempenho</option>
@@ -360,6 +360,31 @@
 </div>
 
 <script>
+  var _TABELAS_QUALP = [
+    {v:'A', t:'Tabela A - Lotação'},
+    {v:'B', t:'Tabela B - Agregados'},
+    {v:'C', t:'Tabela C - Lotação de alto desempenho'},
+    {v:'D', t:'Tabela D - Agregados de alto desempenho'},
+  ];
+  var _TABELAS_ROTABRASIL = [
+    {v:'A', t:'Tabela A'},
+    {v:'B', t:'Tabela B'},
+    {v:'C', t:'Tabela C'},
+    {v:'D', t:'Tabela D'},
+  ];
+
+  function atualizarTabelaFrete() {
+    var sel = document.getElementById('select-site');
+    var tabSel = document.getElementById('select-tabela-frete');
+    if (!sel || !tabSel) return;
+    var txt = (sel.options[sel.selectedIndex]?.text || '').toLowerCase();
+    var opcoes = txt.includes('qualp') ? _TABELAS_QUALP : _TABELAS_ROTABRASIL;
+    var atual = tabSel.value;
+    tabSel.innerHTML = opcoes.map(function(o) {
+      return '<option value="' + o.v + '"' + (o.v === atual ? ' selected' : '') + '>' + o.t + '</option>';
+    }).join('');
+  }
+  document.addEventListener('DOMContentLoaded', atualizarTabelaFrete);
 
   var _timerInterval = null;
 
