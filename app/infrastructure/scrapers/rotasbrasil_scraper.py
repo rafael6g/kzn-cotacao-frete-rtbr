@@ -12,6 +12,7 @@ Estratégia:
 """
 
 import re
+import random
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -46,7 +47,7 @@ async def _digitar_endereco(page, seletor: str, texto: str) -> None:
     Mais rápido que antes (era 50ms) mas confiável para disparar o dropdown.
     """
     await page.fill(seletor, "")
-    await page.type(seletor, texto, delay=15)
+    await page.type(seletor, texto, delay=random.randint(10, 25))
 
 
 URL_BASE = "https://rotasbrasil.com.br"
@@ -103,7 +104,13 @@ class RotasBrasilScraper(SiteScraper):
                 "AppleWebKit/537.36 (KHTML, like Gecko) "
                 "Chrome/120.0.0.0 Safari/537.36"
             ),
-            viewport={"width": 1280, "height": 800},
+            viewport=random.choice([
+                {"width": 1366, "height": 768},
+                {"width": 1440, "height": 900},
+                {"width": 1536, "height": 864},
+                {"width": 1280, "height": 800},
+                {"width": 1920, "height": 1080},
+            ]),
             locale="pt-BR",
         )
         self._page = await self._context.new_page()

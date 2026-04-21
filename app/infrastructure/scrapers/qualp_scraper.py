@@ -13,6 +13,8 @@ Estratégia:
 """
 
 import asyncio
+import time
+import random
 import json
 import re
 from datetime import datetime, timezone
@@ -72,6 +74,20 @@ SEL_TAB_ATIVA     = "div.q-tab--active"         # aba ROTA selecionada
 SEL_FRETE_ROW     = "tr.q-tr"                   # linhas da tabela ANTT
 
 
+_VIEWPORTS = [
+    {"width": 1366, "height": 768},
+    {"width": 1440, "height": 900},
+    {"width": 1536, "height": 864},
+    {"width": 1280, "height": 800},
+    {"width": 1920, "height": 1080},
+]
+
+def _j(base: int, pct: float = 0.25) -> int:
+    """Retorna valor aleatório em torno de base ±pct — quebra padrão de bot."""
+    delta = int(base * pct)
+    return random.randint(base - delta, base + delta)
+
+
 class QualPScraper(SiteScraper):
 
     def __init__(self, usuario: str, senha: str, headless: bool = True,
@@ -84,8 +100,8 @@ class QualPScraper(SiteScraper):
         self._browser: Optional[Browser] = None
         self._context: Optional[BrowserContext] = None
         self._page: Optional[Page] = None
-        # Estado atual do formulário — evita redigitar campos que não mudaram
         self._form: dict = {}
+        self._login_ts: float = 0.0  # timestamp do último login bem-sucedido
 
     # ── Ciclo de vida ─────────────────────────────────────────────────
 
@@ -108,7 +124,7 @@ class QualPScraper(SiteScraper):
                 "AppleWebKit/537.36 (KHTML, like Gecko) "
                 "Chrome/120.0.0.0 Safari/537.36"
             ),
-            viewport={"width": 1280, "height": 800},
+            viewport=random.choice(_VIEWPORTS),
             locale="pt-BR",
             permissions=[],
         )
@@ -182,9 +198,11 @@ class QualPScraper(SiteScraper):
     async def esta_ativo(self) -> bool:
         if not self._page:
             return False
+        # Pula verificação por 60s após login para evitar falso negativo durante transição
+        if time.time() - self._login_ts < 60:
+            return True
         try:
             await self._page.evaluate("1 + 1")
-            # Se o botão "Logar" estiver visível, não está logado
             botao_logar = self._page.locator("text=Logar").first
             if await botao_logar.is_visible(timeout=2000):
                 return False
@@ -234,7 +252,7 @@ class QualPScraper(SiteScraper):
             if await titulo.is_visible(timeout=4000):
                 btn = self._page.locator("button:near(:text('Embarcador'))").first
                 await btn.click()
-                await self._page.wait_for_timeout(800)
+                await self._page.wait_for_timeout(_j(800))
                 logger.debug("QualP: popup de alerta fechado.")
         except Exception:
             pass
@@ -246,7 +264,7 @@ class QualPScraper(SiteScraper):
             btn = self._page.locator("text=Logar").first
             if await btn.is_visible(timeout=5000):
                 await btn.click()
-                await self._page.wait_for_timeout(1500)
+                await self._page.wait_for_timeout(_j(1500))
         except PlaywrightTimeout:
             pass
 
@@ -255,16 +273,16 @@ class QualPScraper(SiteScraper):
             campo_email = self._page.locator(SEL_INPUT_EMAIL).first
             await campo_email.wait_for(state="visible", timeout=10000)
             await campo_email.click()
-            await self._page.wait_for_timeout(500)
-            await campo_email.type(self._usuario, delay=90)
+            await self._page.wait_for_timeout(_j(500))
+            await campo_email.type(self._usuario, delay=_j(90))
         except PlaywrightTimeout:
             raise SiteIndisponivelError("QualP: campo de e-mail não encontrado no modal de login.")
 
         # Preenche senha
         campo_senha = self._page.locator(SEL_INPUT_SENHA).first
         await campo_senha.click()
-        await self._page.wait_for_timeout(600)
-        await campo_senha.type(self._senha, delay=90)
+        await self._page.wait_for_timeout(_j(600))
+        await campo_senha.type(self._senha, delay=_j(90))
 
         # Clica LOGAR (percorre botões visíveis para encontrar o correto)
         buttons = self._page.locator("button")
@@ -287,6 +305,7 @@ class QualPScraper(SiteScraper):
                 timeout=15000,
             )
             logger.info("QualP: login realizado com sucesso.")
+            self._login_ts = time.time()
         except PlaywrightTimeout:
             raise SiteIndisponivelError("QualP: timeout aguardando login — credenciais inválidas ou bloqueio.")
 
@@ -305,7 +324,7 @@ class QualPScraper(SiteScraper):
             count = await icones.count()
             if count > indice:
                 await icones.nth(indice).click()
-                await self._page.wait_for_timeout(300)
+                await self._page.wait_for_timeout(_j(300))
             else:
                 # Fallback: JS click no nth ícone de veículo
                 await self._page.evaluate(f"""
@@ -352,7 +371,7 @@ class QualPScraper(SiteScraper):
                     inp.dispatchEvent(new Event('change', {{bubbles: true}}));
                 }}
             """)
-            await self._page.wait_for_timeout(300)
+            await self._page.wait_for_timeout(_j(300))
 
             logger.debug(f"QualP: eixos ajustados de {atual} para {eixos_desejados}")
             self._form["eixos"] = eixos_desejados
@@ -375,9 +394,9 @@ class QualPScraper(SiteScraper):
                 await locator.wait_for(state="visible", timeout=5000)
                 # 3 cliques seguidos selecionam todo o conteúdo existente
                 await locator.click(click_count=3, force=True)
-                await self._page.wait_for_timeout(200)
-                await locator.type(valor, delay=80)
-                await self._page.wait_for_timeout(300)
+                await self._page.wait_for_timeout(_j(200))
+                await locator.type(valor, delay=_j(80))
+                await self._page.wait_for_timeout(_j(300))
                 # Verifica o que foi preenchido de fato
                 preenchido = await locator.input_value()
                 logger.debug(f"QualP: {nome}={valor!r} → campo={preenchido!r}")
@@ -441,11 +460,11 @@ class QualPScraper(SiteScraper):
                     inp.dispatchEvent(new Event('change', {bubbles: true}));
                 }
             """)
-            await self._page.wait_for_timeout(300)
+            await self._page.wait_for_timeout(_j(300))
             await container.click()
-            await self._page.wait_for_timeout(400)
-            await self._page.keyboard.type(termo, delay=100)
-            await self._page.wait_for_timeout(600)
+            await self._page.wait_for_timeout(_j(400))
+            await self._page.keyboard.type(termo, delay=_j(100))
+            await self._page.wait_for_timeout(_j(600))
             cidade = termo.split(",")[0].strip()
             await self._selecionar_primeira_sugestao("origem", cidade)
             self._form["origem"] = endereco
@@ -472,11 +491,11 @@ class QualPScraper(SiteScraper):
                     inp.dispatchEvent(new Event('change', {bubbles: true}));
                 }
             """)
-            await self._page.wait_for_timeout(300)
+            await self._page.wait_for_timeout(_j(300))
             await campo.click(force=True)
-            await self._page.wait_for_timeout(400)
-            await self._page.keyboard.type(termo, delay=100)
-            await self._page.wait_for_timeout(600)
+            await self._page.wait_for_timeout(_j(400))
+            await self._page.keyboard.type(termo, delay=_j(100))
+            await self._page.wait_for_timeout(_j(600))
             cidade = termo.split(",")[0].strip()
             await self._selecionar_primeira_sugestao("destino", cidade)
             self._form["destino"] = endereco
@@ -495,7 +514,7 @@ class QualPScraper(SiteScraper):
             # Aguarda o painel aparecer
             painel = self._page.locator(".waypoints-location-drawer")
             await painel.wait_for(state="visible", timeout=5000)
-            await self._page.wait_for_timeout(500)
+            await self._page.wait_for_timeout(_j(500))
 
             sugestoes = self._page.locator(SEL_SUGESTAO)
             count = await sugestoes.count()
@@ -518,12 +537,12 @@ class QualPScraper(SiteScraper):
             alvo = idx_cidade if idx_cidade != -1 else (idx_literal if idx_literal != -1 else 0)
             logger.debug(f"QualP: {campo} — {count} sugestões, escolhendo índice {alvo}")
             await sugestoes.nth(alvo).click()
-            await self._page.wait_for_timeout(800)
+            await self._page.wait_for_timeout(_j(800))
 
         except PlaywrightTimeout:
             logger.warning(f"QualP: nenhuma sugestão para '{campo}' — pressionando Enter")
             await self._page.keyboard.press("Enter")
-            await self._page.wait_for_timeout(800)
+            await self._page.wait_for_timeout(_j(800))
 
     async def _submeter(self, delay_segundos: int) -> None:
         """Clica no botão CALCULAR e aguarda o resultado aparecer."""
