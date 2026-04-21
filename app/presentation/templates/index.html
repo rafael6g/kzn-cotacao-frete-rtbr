@@ -232,7 +232,7 @@
 
       <!-- Row 3: Delay + Tabela Frete + Tipos de Carga -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="form-control">
+        <div id="bloco-delay" class="form-control">
           <label class="label pb-1">
             <span class="label-text text-gray-400 text-xs font-medium">
               Delay entre consultas (s)
@@ -241,7 +241,7 @@
               <span class="badge badge-xs" style="background:rgba(234,179,8,0.2);color:#ca8a04;border:none;">Evita bloqueio</span>
             </span>
           </label>
-          <input type="number" name="delay_segundos" min="8" max="120" value="{{ delay_padrao }}" required
+          <input id="input-delay" type="number" name="delay_segundos" min="1" max="120" value="{{ delay_padrao }}" required
             class="input input-bordered input-sm bg-black/30 border-white/10 text-gray-200 focus:border-red-800" />
         </div>
         <div id="bloco-tabela-frete" class="form-control">
@@ -263,6 +263,19 @@
             Todos os 12 tipos extraídos automaticamente
           </div>
         </div>
+      </div>
+
+      <!-- Row ANTT: Retorno Vazio (só aparece quando ANTT selecionado) -->
+      <div id="bloco-retorno-vazio" class="hidden">
+        <label class="flex items-center gap-3 cursor-pointer select-none group">
+          <input type="checkbox" name="retorno_vazio" id="check-retorno-vazio" value="true"
+                 class="checkbox checkbox-sm"
+                 style="border-color: rgba(191,24,27,0.5); --chkbg: #BF181B;" />
+          <div>
+            <span class="text-sm text-gray-300 group-hover:text-white transition-colors">Retorno Vazio</span>
+            <span class="block text-xs text-gray-600">Adiciona 0,92 × distância × CCD ao valor total</span>
+          </div>
+        </label>
       </div>
 
       <!-- Divider -->
@@ -373,17 +386,47 @@
     {v:'C', t:'Tabela C'},
     {v:'D', t:'Tabela D'},
   ];
+  var _TABELAS_ANTT = [
+    {v:'A', t:'Tabela A - Transporte Rodoviário de Carga e Lotação'},
+    {v:'B', t:'Tabela B - Operações em que Haja a Contratação Apenas do Veículo Automotor de Cargas'},
+    {v:'C', t:'Tabela C - Transporte Rodoviário de Carga Lotação de Alto Desempenho'},
+    {v:'D', t:'Tabela D - Operações em que Haja a Contratação Apenas do Veículo Automotor de Cargas de Alto Desempenho'},
+  ];
 
   function atualizarTabelaFrete() {
     var sel = document.getElementById('select-site');
     var tabSel = document.getElementById('select-tabela-frete');
     if (!sel || !tabSel) return;
     var txt = (sel.options[sel.selectedIndex]?.text || '').toLowerCase();
-    var opcoes = txt.includes('qualp') ? _TABELAS_QUALP : _TABELAS_ROTABRASIL;
-    var atual = tabSel.value;
+    var isAntt  = txt.includes('antt');
+    var isQualp = txt.includes('qualp');
+    var opcoes  = isAntt ? _TABELAS_ANTT : isQualp ? _TABELAS_QUALP : _TABELAS_ROTABRASIL;
+    var atual   = tabSel.value;
     tabSel.innerHTML = opcoes.map(function(o) {
       return '<option value="' + o.v + '"' + (o.v === atual ? ' selected' : '') + '>' + o.t + '</option>';
     }).join('');
+
+    // Campos desabilitados para ANTT (não usados pelo scraper)
+    var camposDesativar = ['veiculo', 'preco_combustivel', 'consumo_km_l'];
+    camposDesativar.forEach(function(nome) {
+      var el = document.querySelector('[name="' + nome + '"]');
+      if (!el) return;
+      el.disabled = isAntt;
+      el.closest('.form-control').style.opacity = isAntt ? '0.35' : '1';
+    });
+
+    // Delay: ANTT pode ser menor (sem browser bloqueio de bot)
+    var inputDelay = document.getElementById('input-delay');
+    if (inputDelay && isAntt && inputDelay.value > 5) {
+      inputDelay.value = 2;
+    }
+
+    // Retorno Vazio: só aparece para ANTT
+    var blocoRV = document.getElementById('bloco-retorno-vazio');
+    if (blocoRV) {
+      blocoRV.classList.toggle('hidden', !isAntt);
+      if (!isAntt) document.getElementById('check-retorno-vazio').checked = false;
+    }
   }
   document.addEventListener('DOMContentLoaded', atualizarTabelaFrete);
 

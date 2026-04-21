@@ -39,6 +39,7 @@ from app.application.interfaces.site_scraper import SiteScraper
 from app.domain.entities.configuracao_site import ConfiguracaoSite
 from app.infrastructure.scrapers.rotasbrasil_scraper import RotasBrasilScraper
 from app.infrastructure.scrapers.qualp_scraper import QualPScraper
+from app.infrastructure.scrapers.antt_scraper import AnttScraper
 
 logger = get_logger(__name__)
 settings = get_settings()
@@ -55,6 +56,8 @@ def _criar_scraper(url_base: str, headless: bool) -> SiteScraper:
             headless=headless,
             session_file=".qualp_session.json",
         )
+    if "antt.gov.br" in url_base:
+        return AnttScraper(headless=headless)
     return RotasBrasilScraper(headless=headless)
 
 # ── Fila SSE por lote: lote_id → asyncio.Queue ───────────────────────
@@ -155,6 +158,7 @@ async def criar_cotacao(
     veiculo: int = Form(default=2),
     modo_visivel: bool = Form(default=False),
     tabela_frete: str = Form(default="A"),
+    retorno_vazio: bool = Form(default=False),
 ):
     repo = get_xano_repository()
     excel_svc = get_excel_service()
@@ -197,7 +201,12 @@ async def criar_cotacao(
     lote = await repo.criar_lote(lote)
 
     # Deriva identificador do scraper a partir da URL do site
-    site_id = "qualp" if "qualp.com.br" in config.url_base else "rotasbrasil"
+    if "qualp.com.br" in config.url_base:
+        site_id = "qualp"
+    elif "antt.gov.br" in config.url_base:
+        site_id = "antt"
+    else:
+        site_id = "rotasbrasil"
 
     # Monta lista de Cotacao a partir das linhas do Excel
     itens_para_criar: list[Cotacao] = []
@@ -217,6 +226,8 @@ async def criar_cotacao(
             ),
             site=site_id,
             tabela_frete=str(linha.get("tabela_frete", tabela_frete)).strip().upper() or tabela_frete,
+            retorno_vazio=bool(linha.get("retorno_vazio", retorno_vazio)),
+            distancia_km=float(linha["distancia_km"]) if linha.get("distancia_km") else None,
         )
         itens_para_criar.append(Cotacao(lote_id=lote.id, linha_numero=i, parametros=params))
 

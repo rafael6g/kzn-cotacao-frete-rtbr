@@ -24,6 +24,8 @@ class ParametrosRota:
     data_tarifa: Optional[str] = None  # formato YYYY-MM-DD
     site: str = ""  # "" = rotasbrasil (chave legada), "qualp" = qualp.com.br
     tabela_frete: str = "A"  # "A" | "B" | "C" | "D" — ANTT Resolução 5.867/2026
+    retorno_vazio: bool = False          # ANTT — adiciona 0,92 × dist × CCD ao valor
+    distancia_km: Optional[float] = None # ANTT — km da rota (se None, busca via RotasBrasil)
 
     def chave_cache(self) -> str:
         """SHA-256 dos parâmetros normalizados — usado como índice no Xano."""
@@ -40,6 +42,8 @@ class ParametrosRota:
             str(self.evitar_balsa),
             self.data_tarifa or "",
             self.tabela_frete.upper(),
+            str(self.retorno_vazio),
+            str(int(self.distancia_km)) if self.distancia_km else "",
         ])
         return hashlib.sha256(partes.encode("utf-8")).hexdigest()
 
@@ -62,4 +66,6 @@ class ParametrosRota:
             "data_tarifa": self.data_tarifa,
             "site": self.site,
             "tabela_frete": self.tabela_frete,
+            "retorno_vazio": self.retorno_vazio,
+            "distancia_km": self.distancia_km,
         }
