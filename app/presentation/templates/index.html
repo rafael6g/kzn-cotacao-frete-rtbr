@@ -175,7 +175,7 @@
           </label>
           <select name="config_id" class="select select-bordered select-sm bg-black/30 border-white/10 text-gray-200 focus:border-red-800" required>
             {% for config in configs %}
-            <option value="{{ config.id }}">{{ config.nome }} — {{ config.descricao }}</option>
+            <option value="{{ config.id }}">{{ config.nome }}{% if config.descricao %} — {{ config.descricao }}{% endif %}</option>
             {% else %}
             <option disabled>Nenhuma configuração cadastrada</option>
             {% endfor %}
