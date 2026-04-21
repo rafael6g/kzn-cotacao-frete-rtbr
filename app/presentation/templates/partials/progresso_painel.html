@@ -131,10 +131,11 @@
         const icone = evento.status === "ok" ? "✓" : "✗";
         const fonte = evento.fonte === "cache" ? "[CACHE]" : "[SITE] ";
 
+        const duracao = evento.duracao_segundos ? `  ⏱${evento.duracao_segundos}s` : "";
         adicionarLog(
           `${icone} ${fonte} ${evento.origem} → ${evento.destino}` +
           (evento.status === "ok"
-            ? `  |  ${evento.distancia || ""}  pedágio: ${evento.pedagio || ""}  total: ${evento.total || ""}`
+            ? `  |  ${evento.distancia || ""}  pedágio: ${evento.pedagio || ""}  total: ${evento.total || ""}${duracao}`
             : `  ERRO: ${evento.mensagem}`),
           cor
         );

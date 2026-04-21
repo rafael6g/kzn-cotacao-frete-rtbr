@@ -1,4 +1,5 @@
 import asyncio
+import time
 from datetime import datetime
 from typing import Callable, Awaitable, Optional
 
@@ -110,10 +111,12 @@ class ProcessarLoteUseCase:
 
                         # O delay é passado ao scraper para ser aplicado APÓS o buscar
                         # e ANTES da extração: consulta → aguarda → salva → próxima
+                        _t0 = time.monotonic()
                         resultado = await self._scraper.consultar(
                             cotacao.parametros,
                             delay_segundos=lote.delay_segundos,
                         )
+                        duracao_s = round(time.monotonic() - _t0, 1)
 
                         cotacao.resultado = resultado
                         cotacao.status = StatusCotacao.CONSULTADO
@@ -142,6 +145,7 @@ class ProcessarLoteUseCase:
                             "distancia": resultado.distancia_km,
                             "pedagio": resultado.valor_pedagio,
                             "total": resultado.valor_total,
+                            "duracao_segundos": duracao_s,
                             "mensagem": f"[SITE] {cotacao.parametros.origem} → {cotacao.parametros.destino}",
                         })
 

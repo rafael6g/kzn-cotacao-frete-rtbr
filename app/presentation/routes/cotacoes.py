@@ -196,7 +196,7 @@ async def criar_cotacao(
     lote = await repo.criar_lote(lote)
 
     # Deriva identificador do scraper a partir da URL do site
-    site_id = "qualp" if "qualp.com.br" in config.url_base else ""
+    site_id = "qualp" if "qualp.com.br" in config.url_base else "rotasbrasil"
 
     # Monta lista de Cotacao a partir das linhas do Excel
     itens_para_criar: list[Cotacao] = []
