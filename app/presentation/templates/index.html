@@ -174,13 +174,23 @@
           <label class="label pb-1">
             <span class="label-text text-gray-300 text-sm font-medium">Tipo de Consulta <span class="text-red-400">*</span></span>
           </label>
-          <select id="select-site" name="config_id" class="select select-bordered select-sm bg-black/30 border-white/10 text-gray-200 focus:border-red-800" required onchange="atualizarTabelaFrete()">
-            {% for config in configs %}
-            <option value="{{ config.id }}" data-tipo="{% if 'antt.gov.br' in config.url_base %}antt{% elif 'qualp.com.br' in config.url_base %}qualp{% else %}rotasbrasil{% endif %}">{{ config.nome }}{% if config.descricao %} — {{ config.descricao }}{% endif %}</option>
-            {% else %}
-            <option disabled>Nenhuma configuração cadastrada</option>
-            {% endfor %}
-          </select>
+          <div class="cs-wrap" id="cs-site">
+            <button type="button" class="cs-btn" onclick="csToggle(this)">
+              <span class="cs-label">{% if configs %}{{ configs[0].nome }}{% if configs[0].descricao %} — {{ configs[0].descricao }}{% endif %}{% else %}Selecione...{% endif %}</span>
+              <svg class="cs-chevron" fill="none" viewBox="0 0 20 20" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 8l4 4 4-4"/></svg>
+            </button>
+            <ul class="cs-list hidden">
+              {% for config in configs %}
+              <li class="cs-opt{% if loop.first %} cs-selected{% endif %}"
+                  data-value="{{ config.id }}"
+                  data-tipo="{% if 'antt.gov.br' in config.url_base %}antt{% elif 'qualp.com.br' in config.url_base %}qualp{% else %}rotasbrasil{% endif %}"
+                  onclick="csSelect(this)">{{ config.nome }}{% if config.descricao %} — {{ config.descricao }}{% endif %}</li>
+              {% else %}
+              <li class="cs-opt" style="opacity:0.5;pointer-events:none">Nenhuma configuração cadastrada</li>
+              {% endfor %}
+            </ul>
+            <input type="hidden" name="config_id" class="cs-input" value="{{ configs[0].id if configs else '' }}" required>
+          </div>
         </div>
       </div>
 
@@ -197,22 +207,36 @@
           <label class="label pb-1">
             <span class="label-text text-gray-400 text-xs font-medium">Veículo</span>
           </label>
-          <select name="veiculo" class="select select-bordered select-sm bg-black/30 border-white/10 text-gray-200">
-            <option value="1">Carro</option>
-            <option value="2" selected>Caminhão</option>
-            <option value="3">Ônibus</option>
-            <option value="4">Moto</option>
-          </select>
+          <div class="cs-wrap" id="cs-veiculo">
+            <button type="button" class="cs-btn" onclick="csToggle(this)">
+              <span class="cs-label">Caminhão</span>
+              <svg class="cs-chevron" fill="none" viewBox="0 0 20 20" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 8l4 4 4-4"/></svg>
+            </button>
+            <ul class="cs-list hidden">
+              <li class="cs-opt" data-value="1" onclick="csSelect(this)">Carro</li>
+              <li class="cs-opt cs-selected" data-value="2" onclick="csSelect(this)">Caminhão</li>
+              <li class="cs-opt" data-value="3" onclick="csSelect(this)">Ônibus</li>
+              <li class="cs-opt" data-value="4" onclick="csSelect(this)">Moto</li>
+            </ul>
+            <input type="hidden" name="veiculo" class="cs-input" value="2">
+          </div>
         </div>
         <div class="form-control">
           <label class="label pb-1">
             <span class="label-text text-gray-400 text-xs font-medium">Eixos</span>
           </label>
-          <select name="eixos" class="select select-bordered select-sm bg-black/30 border-white/10 text-gray-200">
-            {% for n in range(2, 11) %}
-            <option value="{{ n }}" {% if n == 6 %}selected{% endif %}>{{ n }} eixos</option>
-            {% endfor %}
-          </select>
+          <div class="cs-wrap" id="cs-eixos">
+            <button type="button" class="cs-btn" onclick="csToggle(this)">
+              <span class="cs-label">6 eixos</span>
+              <svg class="cs-chevron" fill="none" viewBox="0 0 20 20" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 8l4 4 4-4"/></svg>
+            </button>
+            <ul class="cs-list hidden">
+              {% for n in range(2, 11) %}
+              <li class="cs-opt{% if n == 6 %} cs-selected{% endif %}" data-value="{{ n }}" onclick="csSelect(this)">{{ n }} eixos</li>
+              {% endfor %}
+            </ul>
+            <input type="hidden" name="eixos" class="cs-input" value="6">
+          </div>
         </div>
         <div class="form-control">
           <label class="label pb-1">
@@ -248,12 +272,16 @@
           <label class="label pb-1">
             <span class="label-text text-gray-400 text-xs font-medium">Tabela Frete ANTT</span>
           </label>
-          <select id="select-tabela-frete" name="tabela_frete" class="select select-bordered select-sm bg-black/30 border-white/10 text-gray-200 focus:border-red-800">
-            <option value="A">A — Lotação (caminhão + carreta)</option>
-            <option value="B">B — Agregados (apenas veículo)</option>
-            <option value="C">C — Lotação de alto desempenho</option>
-            <option value="D">D — Agregados de alto desempenho</option>
-          </select>
+          <div class="cs-wrap" id="cs-tabela-frete">
+            <button type="button" class="cs-btn" onclick="csToggle(this)">
+              <span class="cs-label">A — Lotação (caminhão + carreta)</span>
+              <svg class="cs-chevron" fill="none" viewBox="0 0 20 20" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 8l4 4 4-4"/></svg>
+            </button>
+            <ul class="cs-list hidden">
+              <!-- preenchido por atualizarTabelaFrete() -->
+            </ul>
+            <input type="hidden" name="tabela_frete" class="cs-input" value="A">
+          </div>
         </div>
         <div class="form-control">
           <label class="label pb-1">
@@ -264,22 +292,27 @@
             Todos os 12 tipos extraídos automaticamente
           </div>
           <!-- ANTT: seleciona um tipo específico -->
-          <select id="select-tipo-carga" name="tipo_carga"
-                  class="hidden select select-bordered select-sm focus:border-red-800"
-                  style="background-color:#1a0a0a; color:#e5e7eb; border-color:rgba(255,255,255,0.1);">
-            <option value="5"  style="background:#1a0a0a;color:#e5e7eb;">Carga Geral</option>
-            <option value="12" style="background:#1a0a0a;color:#e5e7eb;">Carga Granel Pressurizada</option>
-            <option value="4"  style="background:#1a0a0a;color:#e5e7eb;">Conteinerizada</option>
-            <option value="3"  style="background:#1a0a0a;color:#e5e7eb;">Frigorificada ou Aquecida</option>
-            <option value="2"  style="background:#1a0a0a;color:#e5e7eb;">Granel líquido</option>
-            <option value="1"  style="background:#1a0a0a;color:#e5e7eb;">Granel sólido</option>
-            <option value="6"  style="background:#1a0a0a;color:#e5e7eb;">Neogranel</option>
-            <option value="11" style="background:#1a0a0a;color:#e5e7eb;">Perigosa (carga geral)</option>
-            <option value="10" style="background:#1a0a0a;color:#e5e7eb;">Perigosa (conteinerizada)</option>
-            <option value="9"  style="background:#1a0a0a;color:#e5e7eb;">Perigosa (Frigorificada ou Aquecida)</option>
-            <option value="8"  style="background:#1a0a0a;color:#e5e7eb;">Perigosa (granel líquido)</option>
-            <option value="7"  style="background:#1a0a0a;color:#e5e7eb;">Perigosa (granel sólido)</option>
-          </select>
+          <div class="cs-wrap hidden" id="cs-tipo-carga">
+            <button type="button" class="cs-btn" onclick="csToggle(this)">
+              <span class="cs-label">Carga Geral</span>
+              <svg class="cs-chevron" fill="none" viewBox="0 0 20 20" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 8l4 4 4-4"/></svg>
+            </button>
+            <ul class="cs-list hidden">
+              <li class="cs-opt cs-selected" data-value="5"  onclick="csSelect(this)">Carga Geral</li>
+              <li class="cs-opt" data-value="12" onclick="csSelect(this)">Carga Granel Pressurizada</li>
+              <li class="cs-opt" data-value="4"  onclick="csSelect(this)">Conteinerizada</li>
+              <li class="cs-opt" data-value="3"  onclick="csSelect(this)">Frigorificada ou Aquecida</li>
+              <li class="cs-opt" data-value="2"  onclick="csSelect(this)">Granel líquido</li>
+              <li class="cs-opt" data-value="1"  onclick="csSelect(this)">Granel sólido</li>
+              <li class="cs-opt" data-value="6"  onclick="csSelect(this)">Neogranel</li>
+              <li class="cs-opt" data-value="11" onclick="csSelect(this)">Perigosa (carga geral)</li>
+              <li class="cs-opt" data-value="10" onclick="csSelect(this)">Perigosa (conteinerizada)</li>
+              <li class="cs-opt" data-value="9"  onclick="csSelect(this)">Perigosa (Frigorificada ou Aquecida)</li>
+              <li class="cs-opt" data-value="8"  onclick="csSelect(this)">Perigosa (granel líquido)</li>
+              <li class="cs-opt" data-value="7"  onclick="csSelect(this)">Perigosa (granel sólido)</li>
+            </ul>
+            <input type="hidden" name="tipo_carga" class="cs-input" value="5" disabled>
+          </div>
         </div>
       </div>
 
@@ -412,32 +445,32 @@
   ];
 
   function atualizarTabelaFrete() {
-    var sel = document.getElementById('select-site');
-    var tabSel = document.getElementById('select-tabela-frete');
-    if (!sel || !tabSel) return;
-    var tipo   = sel.options[sel.selectedIndex]?.dataset?.tipo || 'rotasbrasil';
+    var siteWrap = document.getElementById('cs-site');
+    if (!siteWrap) return;
+    var selectedOpt = siteWrap.querySelector('.cs-opt.cs-selected');
+    var tipo   = selectedOpt ? (selectedOpt.dataset.tipo || 'rotasbrasil') : 'rotasbrasil';
     var isAntt  = tipo === 'antt';
     var isQualp = tipo === 'qualp';
     var opcoes  = isAntt ? _TABELAS_ANTT : isQualp ? _TABELAS_QUALP : _TABELAS_ROTABRASIL;
-    var atual   = tabSel.value;
-    tabSel.innerHTML = opcoes.map(function(o) {
-      return '<option value="' + o.v + '"' + (o.v === atual ? ' selected' : '') + '>' + o.t + '</option>';
-    }).join('');
 
-    // Campos desabilitados para ANTT (não usados pelo scraper)
-    var camposDesativar = ['veiculo', 'preco_combustivel', 'consumo_km_l'];
-    camposDesativar.forEach(function(nome) {
+    // Atualiza opções da Tabela Frete (custom select)
+    csSetOptions('cs-tabela-frete', opcoes);
+
+    // Veículo: desabilita custom select para ANTT
+    csSetDisabled('cs-veiculo', isAntt);
+
+    // Combustível / Consumo: inputs simples — desabilita visualmente para ANTT
+    ['preco_combustivel', 'consumo_km_l'].forEach(function(nome) {
       var el = document.querySelector('[name="' + nome + '"]');
       if (!el) return;
       el.disabled = isAntt;
-      el.closest('.form-control').style.opacity = isAntt ? '0.35' : '1';
+      var fc = el.closest('.form-control');
+      if (fc) fc.style.opacity = isAntt ? '0.35' : '1';
     });
 
-    // Delay: ANTT pode ser menor (sem browser bloqueio de bot)
+    // Delay: ANTT pode ser menor
     var inputDelay = document.getElementById('input-delay');
-    if (inputDelay && isAntt && inputDelay.value > 5) {
-      inputDelay.value = 2;
-    }
+    if (inputDelay && isAntt && inputDelay.value > 5) inputDelay.value = 2;
 
     // Retorno Vazio: só aparece para ANTT
     var blocoRV = document.getElementById('bloco-retorno-vazio');
@@ -446,13 +479,17 @@
       if (!isAntt) document.getElementById('check-retorno-vazio').checked = false;
     }
 
-    // Tipos de Carga: estático para QualP/RotasBrasil, dropdown para ANTT
+    // Tipos de Carga
     var tipoAuto = document.getElementById('bloco-tipos-auto');
-    var tipoSel  = document.getElementById('select-tipo-carga');
     if (tipoAuto) tipoAuto.classList.toggle('hidden', isAntt);
-    if (tipoSel)  tipoSel.classList.toggle('hidden', !isAntt);
+    csSetHidden('cs-tipo-carga', !isAntt);
   }
-  document.addEventListener('DOMContentLoaded', atualizarTabelaFrete);
+
+  document.addEventListener('DOMContentLoaded', function() {
+    atualizarTabelaFrete();
+    var siteInput = document.querySelector('#cs-site .cs-input');
+    if (siteInput) siteInput.addEventListener('change', atualizarTabelaFrete);
+  });
 
   var _timerInterval = null;
 

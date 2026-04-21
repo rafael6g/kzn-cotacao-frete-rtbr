@@ -92,6 +92,53 @@
     .section-divider {
       border-color: var(--glass-border);
     }
+
+    /* ── Custom Select Component ── */
+    .cs-wrap { position: relative; }
+    .cs-btn {
+      display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+      cursor: pointer; text-align: left; width: 100%; height: 2rem;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 0.375rem;
+      padding: 0 0.75rem;
+      color: #e5e7eb;
+      font-size: 0.875rem;
+      transition: border-color 0.15s;
+      user-select: none;
+    }
+    .cs-btn:hover { border-color: rgba(255,255,255,0.2); }
+    .cs-btn:focus { outline: 2px solid var(--brand); outline-offset: 1px; }
+    .cs-btn.cs-disabled { opacity: 0.35; pointer-events: none; }
+    .cs-chevron { width: 1rem; height: 1rem; flex-shrink: 0; opacity: 0.5; transition: transform 0.15s; }
+    .cs-wrap.cs-open .cs-chevron { transform: rotate(180deg); }
+    .cs-list {
+      position: absolute; z-index: 200; top: calc(100% + 4px); left: 0; right: 0;
+      background-color: #1a0808 !important;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 0.5rem;
+      max-height: 16rem; overflow-y: auto;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.8);
+      padding: 0.25rem;
+      margin: 0;
+    }
+    .cs-list.hidden { display: none; }
+    .cs-list .cs-opt,
+    .cs-list li.cs-opt {
+      padding: 0.45rem 0.65rem;
+      cursor: pointer;
+      background-color: #1a0808 !important;
+      color: #e5e7eb !important;
+      font-size: 0.8125rem;
+      border-radius: 0.25rem;
+      transition: background-color 0.1s;
+      list-style: none;
+      margin: 0;
+    }
+    .cs-list .cs-opt:hover,
+    .cs-list li.cs-opt:hover { background-color: #301616 !important; }
+    .cs-list .cs-opt.cs-selected,
+    .cs-list li.cs-opt.cs-selected { background-color: #3d1a1a !important; color: #fca5a5 !important; }
   </style>
 </head>
 <body class="min-h-screen">
@@ -124,6 +171,81 @@
         setTimeout(() => el.remove(), 4000);
       });
     });
+
+    // ── Custom Select Component ─────────────────────────────
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.cs-wrap')) {
+        document.querySelectorAll('.cs-wrap.cs-open').forEach(function(w) {
+          w.classList.remove('cs-open');
+          var l = w.querySelector('.cs-list');
+          if (l) l.classList.add('hidden');
+        });
+      }
+    });
+
+    function csToggle(btn) {
+      var wrap = btn.closest('.cs-wrap');
+      var list = wrap.querySelector('.cs-list');
+      var isOpen = wrap.classList.contains('cs-open');
+      document.querySelectorAll('.cs-wrap.cs-open').forEach(function(w) {
+        if (w !== wrap) { w.classList.remove('cs-open'); var l=w.querySelector('.cs-list'); if(l) l.classList.add('hidden'); }
+      });
+      wrap.classList.toggle('cs-open', !isOpen);
+      if (list) list.classList.toggle('hidden', isOpen);
+    }
+
+    function csSelect(optEl) {
+      var wrap = optEl.closest('.cs-wrap');
+      var input = wrap.querySelector('.cs-input');
+      var label = wrap.querySelector('.cs-label');
+      wrap.querySelectorAll('.cs-opt').forEach(function(o) { o.classList.remove('cs-selected'); });
+      optEl.classList.add('cs-selected');
+      if (input) input.value = optEl.dataset.value;
+      if (label) label.textContent = optEl.textContent.trim();
+      wrap.classList.remove('cs-open');
+      var list = wrap.querySelector('.cs-list');
+      if (list) list.classList.add('hidden');
+      if (input) input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    function csSetOptions(wrapId, options) {
+      var wrap = document.getElementById(wrapId);
+      if (!wrap) return;
+      var list = wrap.querySelector('.cs-list');
+      var input = wrap.querySelector('.cs-input');
+      var label = wrap.querySelector('.cs-label');
+      var cur = input ? input.value : '';
+      list.innerHTML = options.map(function(o) {
+        var sel = o.v === cur ? ' cs-selected' : '';
+        return '<li class="cs-opt' + sel + '" data-value="' + o.v + '" onclick="csSelect(this)">' + o.t + '</li>';
+      }).join('');
+      var selected = list.querySelector('.cs-selected') || list.querySelector('.cs-opt');
+      if (selected) {
+        list.querySelectorAll('.cs-opt').forEach(function(o){ o.classList.remove('cs-selected'); });
+        selected.classList.add('cs-selected');
+        if (label) label.textContent = selected.textContent.trim();
+        if (input) input.value = selected.dataset.value;
+      }
+    }
+
+    function csSetDisabled(wrapId, disabled) {
+      var wrap = document.getElementById(wrapId);
+      if (!wrap) return;
+      var btn = wrap.querySelector('.cs-btn');
+      var input = wrap.querySelector('.cs-input');
+      if (btn) btn.classList.toggle('cs-disabled', disabled);
+      if (input) input.disabled = disabled;
+      var fc = wrap.closest('.form-control');
+      if (fc) fc.style.opacity = disabled ? '0.35' : '1';
+    }
+
+    function csSetHidden(wrapId, hidden) {
+      var wrap = document.getElementById(wrapId);
+      if (!wrap) return;
+      wrap.classList.toggle('hidden', hidden);
+      var input = wrap.querySelector('.cs-input');
+      if (input) input.disabled = hidden;
+    }
   </script>
 </body>
 </html>
