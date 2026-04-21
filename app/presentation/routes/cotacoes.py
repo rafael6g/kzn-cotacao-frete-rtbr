@@ -35,12 +35,27 @@ from app.domain.value_objects.parametros_rota import ParametrosRota
 from app.domain.exceptions import ExcelInvalidoError
 from app.application.use_cases.processar_lote import ProcessarLoteUseCase
 from app.application.use_cases.gerar_excel import GerarExcelUseCase
+from app.application.interfaces.site_scraper import SiteScraper
+from app.domain.entities.configuracao_site import ConfiguracaoSite
 from app.infrastructure.scrapers.rotasbrasil_scraper import RotasBrasilScraper
+from app.infrastructure.scrapers.qualp_scraper import QualPScraper
 
 logger = get_logger(__name__)
 settings = get_settings()
 router = APIRouter()
 templates = Jinja2Templates(directory="app/presentation/templates")
+
+
+def _criar_scraper(url_base: str, headless: bool) -> SiteScraper:
+    """Seleciona o scraper correto pelo url_base da ConfiguracaoSite."""
+    if "qualp.com.br" in url_base:
+        return QualPScraper(
+            usuario=settings.qualp_usuario,
+            senha=settings.qualp_senha,
+            headless=headless,
+            session_file=".qualp_session.json",
+        )
+    return RotasBrasilScraper(headless=headless)
 
 # ── Fila SSE por lote: lote_id → asyncio.Queue ───────────────────────
 _filas_progresso: dict[int, asyncio.Queue] = {}
@@ -172,6 +187,7 @@ async def criar_cotacao(
         config_id=config_id,
         validade_cache_horas=config.validade_cache_horas,
         arquivo_path=str(arquivo_path),
+        site_url_base=config.url_base,
         headless=True if settings.playwright_headless else not modo_visivel,
     )
 
@@ -189,6 +205,7 @@ async def _executar_processamento(
     config_id: int,
     validade_cache_horas: int,
     arquivo_path: str,
+    site_url_base: str = "",
     headless: bool = True,
 ) -> None:
     """
@@ -220,7 +237,7 @@ async def _executar_processamento(
             async def on_progresso(evento: dict) -> None:
                 _enfileirar(evento)
 
-            scraper = RotasBrasilScraper(headless=headless)
+            scraper = _criar_scraper(site_url_base, headless)
             use_case = ProcessarLoteUseCase(repo, scraper)
 
             try:

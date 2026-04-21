@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     playwright_timeout_ms: int = 30000
     playwright_slow_mo_ms: int = 0
 
+    # QualP
+    qualp_usuario: str = ""
+    qualp_senha: str = ""
+
     # Processamento
     delay_padrao_segundos: int = 10
     max_retentativas: int = 2
