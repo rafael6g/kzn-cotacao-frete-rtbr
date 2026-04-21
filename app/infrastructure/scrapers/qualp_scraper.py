@@ -337,44 +337,43 @@ class QualPScraper(SiteScraper):
         except Exception as e:
             logger.warning(f"QualP: não foi possível selecionar veículo {veiculo_id}: {e}")
 
-    async def _ajustar_eixos(self, eixos_desejados: int) -> None:
-        if self._form.get("eixos") == eixos_desejados:
-            logger.debug(f"QualP: eixos {eixos_desejados} já definido, pulando")
-            return
-        try:
-            # Lê valor atual pelo .value do input (ex: "6 eixos")
-            atual = await self._page.evaluate(r"""
-                () => {
-                    for (const inp of document.querySelectorAll('input')) {
-                        const m = inp.value.match(/^(\d+) eixos$/);
-                        if (m) return parseInt(m[1]);
-                    }
-                    return 6;
+    async def _ler_eixos_atual(self) -> Optional[int]:
+        """Lê o número de eixos atual direto do DOM (ex: input.value = '6 eixos')."""
+        return await self._page.evaluate(r"""
+            () => {
+                for (const inp of document.querySelectorAll('input')) {
+                    const m = inp.value.match(/^(\d+)\s*eixos?$/i);
+                    if (m) return parseInt(m[1]);
                 }
-            """)
-            diferenca = eixos_desejados - atual
-            logger.debug(f"QualP: eixos atual={atual} desejado={eixos_desejados} diferença={diferenca}")
-            if diferenca == 0:
-                self._form["eixos"] = eixos_desejados
+                return null;
+            }
+        """)
+
+    async def _ajustar_eixos(self, eixos_desejados: int) -> None:
+        try:
+            atual = await self._ler_eixos_atual()
+            if atual is None:
+                logger.warning("QualP: campo eixos não encontrado na página")
                 return
 
-            await self._page.evaluate(f"""
-                () => {{
-                    const inp = Array.from(document.querySelectorAll('input'))
-                        .find(i => /^\\d+ eixos$/.test(i.value));
-                    if (!inp) return;
-                    const setter = Object.getOwnPropertyDescriptor(
-                        window.HTMLInputElement.prototype, 'value'
-                    ).set;
-                    setter.call(inp, '{eixos_desejados} eixos');
-                    inp.dispatchEvent(new Event('input', {{bubbles: true}}));
-                    inp.dispatchEvent(new Event('change', {{bubbles: true}}));
-                }}
-            """)
-            await self._page.wait_for_timeout(_j(300))
+            diferenca = eixos_desejados - atual
+            logger.debug(f"QualP: eixos atual={atual} desejado={eixos_desejados} diff={diferenca}")
 
-            logger.debug(f"QualP: eixos ajustados de {atual} para {eixos_desejados}")
-            self._form["eixos"] = eixos_desejados
+            if diferenca == 0:
+                return
+
+            # Clica nos botões arrow do stepper Quasar — atualiza o model Vue corretamente
+            icon = "keyboard_arrow_up" if diferenca > 0 else "keyboard_arrow_down"
+            btn = self._page.locator(f"i:text-is('{icon}')").first
+            await btn.wait_for(state="visible", timeout=5000)
+
+            for _ in range(abs(diferenca)):
+                await btn.click()
+                await self._page.wait_for_timeout(_j(150))
+
+            resultado = await self._ler_eixos_atual()
+            logger.debug(f"QualP: eixos após ajuste → {resultado}")
+
         except Exception as e:
             logger.warning(f"QualP: não foi possível ajustar eixos para {eixos_desejados}: {e}")
 
