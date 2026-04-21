@@ -528,21 +528,19 @@ class QualPScraper(SiteScraper):
     async def _submeter(self, delay_segundos: int) -> None:
         """Clica no botão CALCULAR e aguarda o resultado aparecer."""
         try:
-            clicado = await self._page.evaluate("""
-                () => {
-                    const btn = Array.from(document.querySelectorAll('button'))
-                        .find(b => b.textContent.trim() === 'CALCULAR');
-                    if (btn) { btn.click(); return true; }
-                    return false;
-                }
-            """)
-            if not clicado:
-                raise SiteIndisponivelError("QualP: botão CALCULAR não encontrado.")
+            btn = self._page.locator(SEL_BTN_CALCULAR).first
+            await btn.wait_for(state="attached", timeout=10000)
+            await btn.click(force=True)
             logger.debug("QualP: CALCULAR clicado, aguardando resultado...")
-        except SiteIndisponivelError:
-            raise
-        except Exception as e:
-            raise SiteIndisponivelError(f"QualP: erro ao clicar CALCULAR: {e}")
+        except PlaywrightTimeout:
+            url_atual = self._page.url
+            # Salva screenshot para diagnóstico
+            try:
+                await self._page.screenshot(path="outputs/debug_calcular.png", full_page=False)
+                logger.error(f"QualP: CALCULAR não encontrado. URL={url_atual} — screenshot salvo em outputs/debug_calcular.png")
+            except Exception:
+                logger.error(f"QualP: CALCULAR não encontrado. URL={url_atual}")
+            raise SiteIndisponivelError("QualP: botão CALCULAR não encontrado.")
 
         # Aguarda o container da tabela de resultado aparecer
         try:
