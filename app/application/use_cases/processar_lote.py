@@ -76,7 +76,13 @@ class ProcessarLoteUseCase:
                 if resultado_cache:
                     cotacao.resultado = resultado_cache
                     cotacao.status = StatusCotacao.CACHE
-                    cotacao.fonte = FonteResultado.CACHE
+                    _site = cotacao.parametros.site or ""
+                    if _site == "qualp":
+                        cotacao.fonte = FonteResultado.CACHE_QUALP
+                    elif _site == "rotasbrasil":
+                        cotacao.fonte = FonteResultado.CACHE_ROTASBRASIL
+                    else:
+                        cotacao.fonte = FonteResultado.CACHE
                     lote.linhas_cache += 1
 
                     await self._emitir(on_progresso, {
@@ -111,7 +117,13 @@ class ProcessarLoteUseCase:
 
                         cotacao.resultado = resultado
                         cotacao.status = StatusCotacao.CONSULTADO
-                        cotacao.fonte = FonteResultado.SITE
+                        site = cotacao.parametros.site or ""
+                        if site == "qualp":
+                            cotacao.fonte = FonteResultado.QUALP
+                        elif site == "rotasbrasil":
+                            cotacao.fonte = FonteResultado.ROTASBRASIL
+                        else:
+                            cotacao.fonte = FonteResultado.SITE
                         lote.linhas_consultadas += 1
 
                         # Salva no cache para reutilização futura

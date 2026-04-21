@@ -73,15 +73,55 @@ def _remover_fila(lote_id: int) -> None:
 
 # ── Download do modelo de exemplo ────────────────────────────────────
 
+_CIDADES_BRASIL = [
+    ("Londrina", "Parana"), ("Maringa", "Parana"), ("Cascavel", "Parana"),
+    ("Ponta Grossa", "Parana"), ("Foz do Iguacu", "Parana"), ("Curitiba", "Parana"),
+    ("Guarapuava", "Parana"), ("Toledo", "Parana"), ("Apucarana", "Parana"),
+    ("Sao Paulo", "Sao Paulo"), ("Campinas", "Sao Paulo"), ("Santos", "Sao Paulo"),
+    ("Ribeirao Preto", "Sao Paulo"), ("Sao Jose dos Campos", "Sao Paulo"),
+    ("Sorocaba", "Sao Paulo"), ("Bauru", "Sao Paulo"), ("Marilia", "Sao Paulo"),
+    ("Belo Horizonte", "Minas Gerais"), ("Uberlandia", "Minas Gerais"),
+    ("Juiz de Fora", "Minas Gerais"), ("Montes Claros", "Minas Gerais"),
+    ("Campo Grande", "Mato Grosso do Sul"), ("Dourados", "Mato Grosso do Sul"),
+    ("Tres Lagoas", "Mato Grosso do Sul"), ("Cuiaba", "Mato Grosso"),
+    ("Porto Alegre", "Rio Grande do Sul"), ("Caxias do Sul", "Rio Grande do Sul"),
+    ("Pelotas", "Rio Grande do Sul"), ("Santa Maria", "Rio Grande do Sul"),
+    ("Florianopolis", "Santa Catarina"), ("Joinville", "Santa Catarina"),
+    ("Blumenau", "Santa Catarina"), ("Chapeco", "Santa Catarina"),
+    ("Goiania", "Goias"), ("Anapolis", "Goias"), ("Rio Verde", "Goias"),
+    ("Salvador", "Bahia"), ("Feira de Santana", "Bahia"),
+    ("Fortaleza", "Ceara"), ("Recife", "Pernambuco"), ("Manaus", "Amazonas"),
+]
+
 @router.get("/modelo")
 async def download_modelo():
-    caminho = BASE_DIR / "static" / "modelo_cotacao.xlsx"
-    if not caminho.exists():
-        raise HTTPException(404, "Arquivo modelo não encontrado.")
-    return FileResponse(
-        path=str(caminho),
-        filename="modelo_cotacao.xlsx",
+    import random
+    import io
+    import openpyxl
+
+    cidades = random.sample(_CIDADES_BRASIL, min(10, len(_CIDADES_BRASIL)))
+    random.shuffle(cidades)
+    origens  = cidades[:5]
+    destinos = cidades[5:]
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Cotações"
+    ws.append(["origem", "destino"])
+    for i in range(5):
+        o = f"{origens[i][0]}, {origens[i][1]}, Brasil"
+        d = f"{destinos[i][0]}, {destinos[i][1]}, Brasil"
+        ws.append([o, d])
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+
+    from fastapi.responses import StreamingResponse
+    return StreamingResponse(
+        buf,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=modelo_cotacao.xlsx"},
     )
 
 
@@ -155,6 +195,9 @@ async def criar_cotacao(
     )
     lote = await repo.criar_lote(lote)
 
+    # Deriva identificador do scraper a partir da URL do site
+    site_id = "qualp" if "qualp.com.br" in config.url_base else ""
+
     # Monta lista de Cotacao a partir das linhas do Excel
     itens_para_criar: list[Cotacao] = []
     for i, linha in enumerate(linhas, start=1):
@@ -171,6 +214,7 @@ async def criar_cotacao(
                 str(linha.get("consumo_km_l", consumo_km_l))
                 .replace(",", ".")
             ),
+            site=site_id,
         )
         itens_para_criar.append(Cotacao(lote_id=lote.id, linha_numero=i, parametros=params))
 

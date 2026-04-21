@@ -22,10 +22,12 @@ class ParametrosRota:
     evitar_pedagio: bool = False
     evitar_balsa: bool = False
     data_tarifa: Optional[str] = None  # formato YYYY-MM-DD
+    site: str = ""  # "" = rotasbrasil (chave legada), "qualp" = qualp.com.br
 
     def chave_cache(self) -> str:
         """SHA-256 dos parâmetros normalizados — usado como índice no Xano."""
         partes = "|".join([
+            self.site.lower().strip(),
             self.origem.lower().strip(),
             self.destino.lower().strip(),
             str(self.veiculo),
@@ -56,4 +58,5 @@ class ParametrosRota:
             "evitar_pedagio": self.evitar_pedagio,
             "evitar_balsa": self.evitar_balsa,
             "data_tarifa": self.data_tarifa,
+            "site": self.site,
         }

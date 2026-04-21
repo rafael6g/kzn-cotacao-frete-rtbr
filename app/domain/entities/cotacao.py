@@ -15,8 +15,12 @@ class StatusCotacao(str, Enum):
 
 
 class FonteResultado(str, Enum):
-    CACHE = "cache"
-    SITE = "site"
+    CACHE = "cache"                        # legado
+    SITE = "site"                          # legado
+    QUALP = "qualp"
+    ROTASBRASIL = "rotasbrasil"
+    CACHE_QUALP = "cache_qualp"
+    CACHE_ROTASBRASIL = "cache_rotasbrasil"
 
 
 @dataclass

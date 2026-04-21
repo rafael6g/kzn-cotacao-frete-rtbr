@@ -99,6 +99,11 @@ class ExcelService:
 
             row["resultado_origem_site"] = cotacao.parametros.origem
             row["resultado_destino_site"] = cotacao.parametros.destino
+            row["resultado_param_site"] = cotacao.parametros.site or "rotasbrasil"
+            row["resultado_param_veiculo"] = cotacao.parametros.veiculo_label
+            row["resultado_param_eixos"] = cotacao.parametros.eixos
+            row["resultado_param_preco_combustivel"] = cotacao.parametros.preco_combustivel
+            row["resultado_param_consumo_km_l"] = cotacao.parametros.consumo_km_l
             row["resultado_status"] = cotacao.status.value
             row["resultado_fonte"] = cotacao.fonte.value if cotacao.fonte else ""
             row["resultado_tempo_viagem"] = r.tempo_viagem if r else ""
@@ -166,6 +171,11 @@ class ExcelService:
             "destino excel",
             "origem site",
             "destino site",
+            "param_site",
+            "param_veiculo",
+            "param_eixos",
+            "param_preco_combustivel",
+            "param_consumo_km_l",
             "tempo_viagem",
             "distancia_km",
             "rota_descricao",
@@ -223,7 +233,10 @@ class ExcelService:
             branco      = Font(color="FFFFFF", bold=True)
 
             COLUNAS_RESULTADO = {
-                "origem site", "destino site", "status", "fonte", "tempo_viagem",
+                "origem site", "destino site",
+                "param_site", "param_veiculo", "param_eixos",
+                "param_preco_combustivel", "param_consumo_km_l",
+                "status", "fonte", "tempo_viagem",
                 "distancia_km", "rota_descricao", "valor_pedagio",
                 "valor_combustivel", "valor_total", "consultado_em",
                 "validade_ate", "erro",
