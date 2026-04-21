@@ -111,7 +111,13 @@ class XanoRepository(CotacaoRepository):
                 if expira_em and expira_em < agora_ms:
                     logger.debug("Cache encontrado mas expirado, ignorando.")
                     continue
-                return ResultadoRota.from_dict(item.get("resultado", {}))
+                resultado = ResultadoRota.from_dict(item.get("resultado", {}))
+                # Cache inválido: scrape anterior falhou — valor_total vazio e nenhum frete com valor real
+                fretes_com_valor = any(v for v in resultado.fretes.values() if v)
+                if not resultado.valor_total and not fretes_com_valor:
+                    logger.debug("Cache encontrado mas resultado vazio, ignorando.")
+                    continue
+                return resultado
 
             return None
         except XanoApiError as e:

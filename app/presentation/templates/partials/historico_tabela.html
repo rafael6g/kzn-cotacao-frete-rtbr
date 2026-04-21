@@ -1,71 +1,118 @@
 {% if lotes %}
-<div class="overflow-x-auto mt-4">
-  <table class="table table-zebra table-sm w-full">
-    <thead class="text-white" style="background:#BF181B;">
-      <tr>
-        <th>ID</th>
-        <th>Nome</th>
-        <th>Data</th>
-        <th>Status</th>
-        <th>Total</th>
-        <th>Cache</th>
-        <th>Site</th>
-        <th>Erros</th>
-        <th>Progresso</th>
-        <th>Ações</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for lote in lotes %}
-      <tr>
-        <td class="font-mono text-xs text-gray-400">#{{ lote.id }}</td>
-        <td class="font-semibold">{{ lote.nome }}</td>
-        <td class="text-xs text-gray-400 whitespace-nowrap">
-          {% if lote.created_at %}
-            {{ lote.created_at.strftime('%d/%m/%Y %H:%M') }}
-          {% else %}—{% endif %}
-        </td>
-        <td>
-          {% if lote.status.value == "concluido" %}
-            <span class="badge badge-success badge-sm">✓ Concluído</span>
-          {% elif lote.status.value == "processando" %}
-            <span class="badge badge-warning badge-sm animate-pulse">⏳ Processando</span>
-          {% elif lote.status.value == "erro" %}
-            <span class="badge badge-error badge-sm">✗ Erro</span>
-          {% else %}
-            <span class="badge badge-ghost badge-sm">{{ lote.status.value }}</span>
-          {% endif %}
-        </td>
-        <td class="text-center">{{ lote.total_linhas }}</td>
-        <td class="text-center text-blue-600">{{ lote.linhas_cache }}</td>
-        <td class="text-center text-gray-300">{{ lote.linhas_consultadas }}</td>
-        <td class="text-center text-red-500">{{ lote.linhas_erro }}</td>
-        <td>
-          <progress
-            class="progress w-20"
-            style="accent-color:#BF181B;"
-            value="{{ lote.linhas_processadas }}"
-            max="{{ lote.total_linhas or 1 }}"
-          ></progress>
-          <span class="text-xs ml-1">{{ lote.percentual }}%</span>
-        </td>
-        <td class="flex gap-1">
+<table class="w-full text-sm">
+  <thead>
+    <tr style="border-bottom: 1px solid rgba(255,255,255,0.08);">
+      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
+      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nome</th>
+      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
+      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+      <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+      <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Cache</th>
+      <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Consultados</th>
+      <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Erros</th>
+      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Progresso</th>
+      <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for lote in lotes %}
+    <tr class="transition-colors hover:bg-white/5" style="border-bottom: 1px solid rgba(255,255,255,0.04);">
+      <td class="px-4 py-3 font-mono text-xs text-gray-500">#{{ lote.id }}</td>
+      <td class="px-4 py-3 font-medium text-gray-200">{{ lote.nome }}</td>
+      <td class="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">
+        {% if lote.created_at %}
+          {{ lote.created_at.strftime('%d/%m/%Y %H:%M') }}
+        {% else %}—{% endif %}
+      </td>
+      <td class="px-4 py-3">
+        {% if lote.status.value == "concluido" %}
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
+                style="background:rgba(34,197,94,0.15); color:#4ade80; border:1px solid rgba(34,197,94,0.3);">
+            <span class="h-1.5 w-1.5 rounded-full inline-block" style="background:#4ade80;"></span>
+            Concluído
+          </span>
+        {% elif lote.status.value == "processando" %}
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium animate-pulse"
+                style="background:rgba(234,179,8,0.15); color:#facc15; border:1px solid rgba(234,179,8,0.3);">
+            <span class="h-1.5 w-1.5 rounded-full inline-block" style="background:#facc15;"></span>
+            Processando
+          </span>
+        {% elif lote.status.value == "erro" %}
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
+                style="background:rgba(239,68,68,0.15); color:#f87171; border:1px solid rgba(239,68,68,0.3);">
+            <span class="h-1.5 w-1.5 rounded-full inline-block" style="background:#f87171;"></span>
+            Erro
+          </span>
+        {% else %}
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
+                style="background:rgba(255,255,255,0.06); color:#9ca3af; border:1px solid rgba(255,255,255,0.1);">
+            {{ lote.status.value }}
+          </span>
+        {% endif %}
+      </td>
+      <td class="px-4 py-3 text-center text-gray-300">{{ lote.total_linhas }}</td>
+      <td class="px-4 py-3 text-center">
+        <span class="text-xs font-medium" style="color:#60a5fa;">{{ lote.linhas_cache }}</span>
+      </td>
+      <td class="px-4 py-3 text-center text-gray-400">{{ lote.linhas_consultadas }}</td>
+      <td class="px-4 py-3 text-center">
+        <span class="text-xs font-medium" style="color:{% if lote.linhas_erro > 0 %}#f87171{% else %}#6b7280{% endif %};">{{ lote.linhas_erro }}</span>
+      </td>
+      <td class="px-4 py-3">
+        <div class="flex items-center gap-2">
+          <div class="flex-1 h-1.5 rounded-full overflow-hidden" style="background:rgba(255,255,255,0.08); min-width:60px;">
+            <div class="h-full rounded-full transition-all" style="width:{{ lote.percentual }}%; background:#BF181B;"></div>
+          </div>
+          <span class="text-xs text-gray-500 w-8 text-right">{{ lote.percentual }}%</span>
+        </div>
+      </td>
+      <td class="px-4 py-3 text-center">
+        <div class="flex items-center justify-center gap-1">
           {% if lote.arquivo_saida %}
-          <a href="/cotacoes/{{ lote.id }}/download" class="btn btn-xs text-white" style="background:#BF181B; border:none;">📥</a>
+          <a href="/cotacoes/{{ lote.id }}/download"
+             class="btn btn-xs gap-1"
+             style="background:rgba(191,24,27,0.2); border:1px solid rgba(191,24,27,0.4); color:#fca5a5;"
+             title="Baixar Excel">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+            </svg>
+            Excel
+          </a>
           {% endif %}
           {% if lote.status.value == "processando" %}
-          <a href="/" hx-boost="true" class="btn btn-xs btn-warning">👁 Ver</a>
+          <a href="/" hx-boost="true"
+             class="btn btn-xs gap-1"
+             style="background:rgba(234,179,8,0.15); border:1px solid rgba(234,179,8,0.3); color:#facc15;"
+             title="Ver progresso">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+            </svg>
+            Ver
+          </a>
           {% endif %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+        </div>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
 {% else %}
-<div class="text-center text-gray-400 py-10">
-  <p class="text-4xl mb-2">📭</p>
-  <p>Nenhuma cotação processada ainda.</p>
-  <a href="/" class="btn btn-sm mt-3 text-white" style="background:#BF181B; border:none;">Criar primeira cotação</a>
+<div class="flex flex-col items-center justify-center h-full text-center py-16">
+  <div class="h-16 w-16 rounded-full flex items-center justify-center mb-4"
+       style="background: rgba(191,24,27,0.1); border: 1px solid rgba(191,24,27,0.2);">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"
+         style="color: rgba(191,24,27,0.6);">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+    </svg>
+  </div>
+  <p class="text-gray-400 font-medium mb-1">Nenhuma cotação processada ainda</p>
+  <p class="text-gray-600 text-sm mb-4">Os lotes aparecerão aqui assim que forem criados</p>
+  <a href="/" class="btn btn-sm btn-brand gap-2">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+    </svg>
+    Criar primeira cotação
+  </a>
 </div>
 {% endif %}

@@ -197,6 +197,10 @@ class ExcelService:
             "valor_pedagio",
             "valor_combustivel",
             "valor_total",
+            "antt_ccd",
+            "antt_cc",
+            "antt_valor_ida",
+            "antt_valor_retorno",
             "Tipo_Carga_Granel Sólido",
             "Tipo_Carga_Granel Líquido",
             "Tipo_Carga_Frigorificada",
@@ -255,8 +259,9 @@ class ExcelService:
                 "param_retorno_vazio",
                 "status", "fonte", "tempo_viagem",
                 "distancia_km", "rota_descricao", "valor_pedagio",
-                "valor_combustivel", "valor_total", "consultado_em",
-                "validade_ate", "erro", "pedagios",
+                "valor_combustivel", "valor_total",
+                "antt_ccd", "antt_cc", "antt_valor_ida", "antt_valor_retorno",
+                "consultado_em", "validade_ate", "erro", "pedagios",
             }
             for cell in ws[1]:
                 col = str(cell.value or "")

@@ -3,9 +3,11 @@ Diagnóstico visual da Calculadora ANTT (calculadorafrete.antt.gov.br).
 Abre o browser, busca a distância no RotasBrasil e preenche a calculadora ANTT.
 
 Uso:
-    .venv/Scripts/python diagnostico_antt.py          # eixos=5 tabela=A
-    .venv/Scripts/python diagnostico_antt.py 9a       # 9 eixos, tabela A
-    .venv/Scripts/python diagnostico_antt.py 6b       # 6 eixos, tabela B
+    .venv/Scripts/python diagnostico_antt.py              # eixos=5 tabela=A aleatório
+    .venv/Scripts/python diagnostico_antt.py 2b           # 2 eixos, tabela B
+    .venv/Scripts/python diagnostico_antt.py 6c           # 6 eixos, tabela C
+    .venv/Scripts/python diagnostico_antt.py 5ar          # 5 eixos, tabela A, retorno vazio
+    .venv/Scripts/python diagnostico_antt.py 6b "Londrina, Parana" "Sao Paulo, Sao Paulo"
 """
 
 import asyncio
@@ -42,15 +44,20 @@ _par = random.sample(_CIDADES, 2)
 ORIGEM, DESTINO = _par[0], _par[1]
 
 if len(sys.argv) >= 2:
-    _m = re.match(r"(\d+)([abcdABCD])", sys.argv[1])
+    _m = re.match(r"(\d+)([abcdABCD])(r?)", sys.argv[1], re.IGNORECASE)
     if _m:
-        EIXOS        = int(_m.group(1))
-        TABELA_FRETE = _m.group(2).upper()
+        EIXOS         = int(_m.group(1))
+        TABELA_FRETE  = _m.group(2).upper()
+        RETORNO_VAZIO = _m.group(3).lower() == "r"
     else:
         try:
             EIXOS = int(sys.argv[1])
         except ValueError:
             pass
+
+if len(sys.argv) >= 4:
+    ORIGEM  = sys.argv[2]
+    DESTINO = sys.argv[3]
 
 # Eixos válidos na ANTT: 2,3,4,5,6,7,9 (sem 8)
 _EIXOS_VALIDOS = [2, 3, 4, 5, 6, 7, 9]
@@ -261,84 +268,42 @@ async def main():
     except Exception as e:
         falhou(t, str(e))
 
-    # [13] Marca/desmarca "É composição veicular?"
+    # Helper: clica no Bootstrap Toggle div pai para marcar/desmarcar
+    # O site usa data-toggle="toggle" (Bootstrap Toggle plugin):
+    # div.toggle.off = desmarcado, div.toggle (sem .off) = marcado
+    # Clicar no label nativo NÃO funciona — precisa clicar no div.toggle pai
+    async def _set_toggle(chk_id: str, desejado: bool) -> str:
+        return await page.evaluate(f"""
+            () => {{
+                const chk = document.getElementById('{chk_id}');
+                if (!chk) return 'nao_encontrado';
+                const toggleDiv = chk.closest('.toggle[data-toggle="toggle"]');
+                if (!toggleDiv) return 'toggle_nao_encontrado';
+                const atual = !toggleDiv.classList.contains('off');
+                if (atual !== {str(desejado).lower()}) toggleDiv.click();
+                const final = !toggleDiv.classList.contains('off');
+                return (final ? 'Sim' : 'Não') + ' (off=' + toggleDiv.classList.contains('off') + ')';
+            }}
+        """)
+
+    # [13] Composição Veicular
     t = passo(f"Composicao veicular = {composicao}...")
     try:
-        resultado_js = await page.evaluate(f"""
-            () => {{
-                // Tenta pelo checkbox nativo (pode estar hidden — usa JS direto)
-                const chk = document.querySelector(
-                    '#Filtro_CargaLotacao, input[name="Filtro.CargaLotacao"][type="checkbox"]'
-                );
-                if (!chk) {{
-                    // Tenta clicar no label visual associado
-                    const lbl = document.querySelector('label[for="Filtro_CargaLotacao"]');
-                    if (lbl) {{ lbl.click(); return 'label_click'; }}
-                    return 'nao_encontrado';
-                }}
-                const desejado = {str(composicao).lower()};
-                if (chk.checked !== desejado) {{
-                    // Clica no label se existir, senão força no próprio input
-                    const lbl = document.querySelector('label[for="' + chk.id + '"]');
-                    if (lbl) lbl.click();
-                    else chk.click();
-                }}
-                return 'checked=' + chk.checked;
-            }}
-        """)
-        ok(t, resultado_js)
+        ok(t, await _set_toggle("Filtro_CargaLotacao", composicao))
     except Exception as e:
         falhou(t, str(e))
 
-    # [14] Marca/desmarca "Alto Desempenho"
+    # [14] Alto Desempenho
     t = passo(f"Alto desempenho = {alto_desempenho}...")
     try:
-        resultado_js = await page.evaluate(f"""
-            () => {{
-                const chk = document.querySelector(
-                    '#Filtro_AltoDesempenho, input[name="Filtro.AltoDesempenho"][type="checkbox"]'
-                );
-                if (!chk) {{
-                    const lbl = document.querySelector('label[for="Filtro_AltoDesempenho"]');
-                    if (lbl) {{ lbl.click(); return 'label_click'; }}
-                    return 'nao_encontrado';
-                }}
-                const desejado = {str(alto_desempenho).lower()};
-                if (chk.checked !== desejado) {{
-                    const lbl = document.querySelector('label[for="' + chk.id + '"]');
-                    if (lbl) lbl.click();
-                    else chk.click();
-                }}
-                return 'checked=' + chk.checked;
-            }}
-        """)
-        ok(t, resultado_js)
+        ok(t, await _set_toggle("Filtro_AltoDesempenho", alto_desempenho))
     except Exception as e:
         falhou(t, str(e))
 
-    # [15] Marca/desmarca "Retorno Vazio"
+    # [15] Retorno Vazio
     t = passo(f"Retorno vazio = {RETORNO_VAZIO}...")
     try:
-        resultado_js = await page.evaluate(f"""
-            () => {{
-                const chk = document.querySelector(
-                    '#Filtro_RetornoVazio, input[name="Filtro.RetornoVazio"][type="checkbox"]'
-                );
-                if (!chk) {{
-                    const lbl = document.querySelector('label[for="Filtro_RetornoVazio"]');
-                    if (lbl) {{ lbl.click(); return 'label_click'; }}
-                    return 'nao_encontrado';
-                }}
-                const desejado = {str(RETORNO_VAZIO).lower()};
-                if (chk.checked !== desejado) {{
-                    const lbl = document.querySelector('label[for="' + chk.id + '"]');
-                    if (lbl) lbl.click();
-                    else chk.click();
-                }}
-                return 'checked=' + chk.checked;
-            }}
-        """)
-        ok(t, resultado_js)
+        ok(t, await _set_toggle("Filtro_RetornoVazio", RETORNO_VAZIO))
     except Exception as e:
         falhou(t, str(e))
 

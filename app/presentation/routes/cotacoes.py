@@ -309,9 +309,16 @@ async def _executar_processamento(
                 )
 
                 gerar_excel = GerarExcelUseCase(excel_svc)
+                if "qualp.com.br" in site_url_base:
+                    _site_id = "qualp"
+                elif "antt.gov.br" in site_url_base:
+                    _site_id = "antt"
+                else:
+                    _site_id = "rotasbrasil"
                 arquivo_saida = await gerar_excel.executar(
                     lote_result, cotacoes, arquivo_path,
                     validade_cache_horas=validade_cache_horas,
+                    site_id=_site_id,
                 )
                 lote_result.arquivo_saida = Path(arquivo_saida).name
                 await repo.atualizar_lote(lote_result)
@@ -411,7 +418,15 @@ async def download_excel(lote_id: int):
 
         excel_svc = get_excel_service()
         gerar = GerarExcelUseCase(excel_svc)
-        arquivo_saida = await gerar.executar(lote, cotacoes_regen, "", validade_cache_horas=0)
+        config_dl = await repo.buscar_configuracao(lote.configuracao_site_id) if lote.configuracao_site_id else None
+        url_dl = config_dl.url_base if config_dl else ""
+        if "qualp.com.br" in url_dl:
+            site_id_dl = "qualp"
+        elif "antt.gov.br" in url_dl:
+            site_id_dl = "antt"
+        else:
+            site_id_dl = "rotasbrasil"
+        arquivo_saida = await gerar.executar(lote, cotacoes_regen, "", validade_cache_horas=0, site_id=site_id_dl)
         caminho = Path(arquivo_saida)
 
     return FileResponse(

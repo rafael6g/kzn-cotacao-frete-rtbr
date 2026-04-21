@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     xano_ep_cache: str = "/cache_consulta"
     xano_ep_item: str = "/item_cotacao"
     xano_ep_historico: str = "/historico_excel"
+    xano_ep_cache_distancias: str = "/cache_distancias"
 
     # Playwright
     playwright_headless: bool = True

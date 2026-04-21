@@ -2,30 +2,41 @@
 AnttScraper — Calculadora Oficial ANTT (calculadorafrete.antt.gov.br)
 
 Fluxo por linha:
-  1. Playwright: RotasBrasil → preenche O/D → extrai div.distance (km)
-  2. httpx: GET ANTT → extrai CSRF token
-  3. httpx: POST ANTT × 12 tipos de carga → extrai valores
+  1. Cache em disco (data/cache_distancias.json) → se já tiver o par, usa direto
+  2. Se não tiver: Nominatim (OSM) geocodifica origem/destino → OSRM calcula km
+  3. httpx: GET ANTT → extrai CSRF token
+  4. httpx: POST ANTT → extrai valores de frete
+  Tudo via httpx síncrono em asyncio.to_thread (sem Playwright).
 """
 
+import asyncio
+import json
 import re
-import random
+import threading
+import time
+import urllib.parse
 from datetime import datetime, timezone
-from typing import Optional
+from pathlib import Path
 
 import httpx
-from playwright.async_api import async_playwright
 
 from app.application.interfaces.site_scraper import SiteScraper
 from app.domain.value_objects.parametros_rota import ParametrosRota
 from app.domain.value_objects.resultado_rota import ResultadoRota
+from app.infrastructure.cache import distancia_cache
 from app.core.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-URL_ANTT = "https://calculadorafrete.antt.gov.br/"
-URL_RB   = "https://rotasbrasil.com.br"
+URL_ANTT      = "https://calculadorafrete.antt.gov.br/"
+URL_NOMINATIM = "https://nominatim.openstreetmap.org/search"
+URL_OSRM      = "http://router.project-osrm.org/route/v1/driving"
 
-# ID numérico ANTT → chave de coluna Excel (mesma do QualP/RotasBrasil)
+# Cache de geocodificação em memória (por sessão) — evita múltiplas chamadas ao Nominatim
+_geo_mem:  dict = {}
+_lock_geo  = threading.Lock()
+
+# ID numérico ANTT → chave de coluna Excel
 _TIPO_CARGA_COLS = {
     1:  "Tipo_Carga_Granel Sólido",
     2:  "Tipo_Carga_Granel Líquido",
@@ -68,7 +79,8 @@ _TABELA_FLAGS = {
 # Eixos suportados pela ANTT (sem 8 — arredonda para 7)
 _EIXOS_VALIDOS = [2, 3, 4, 5, 6, 7, 9]
 
-_UA = (
+_UA_APP = "RotaBrasilCotacoes/1.0 (rafael.londrina@gmail.com)"
+_UA_BROWSER = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
     "AppleWebKit/537.36 (KHTML, like Gecko) "
     "Chrome/120.0.0.0 Safari/537.36"
@@ -76,7 +88,7 @@ _UA = (
 
 
 def _checkbox(nome: str, valor: bool) -> list:
-    """ASP.NET MVC checkbox pattern: checked → [true, false]; unchecked → [false]."""
+    """ASP.NET MVC checkbox pattern."""
     if valor:
         return [(nome, "true"), (nome, "false")]
     return [(nome, "false")]
@@ -115,207 +127,198 @@ def _valor_total(html: str) -> str:
 
 def _parsear_resposta(html: str) -> dict:
     return {
-        "tabela_nome":    _span_apos(html, "Operação de Transporte"),
-        "ccd":            _span_apos(html, "Coeficiente de custo de deslocamento (CCD)"),
-        "cc":             _span_apos(html, "Coeficiente de custo de carga e descarga (CC)"),
-        "valor_ida":      _span_apos(html, "Valor de ida"),
-        "valor_retorno":  _span_apos(html, "Valor do retorno vazio"),
-        "valor_total":    _valor_total(html),
+        "tabela_nome":   _span_apos(html, "Operação de Transporte"),
+        "ccd":           _span_apos(html, "Coeficiente de custo de deslocamento (CCD)"),
+        "cc":            _span_apos(html, "Coeficiente de custo de carga e descarga (CC)"),
+        "valor_ida":     _span_apos(html, "Valor de ida"),
+        "valor_retorno": _span_apos(html, "Valor do retorno vazio"),
+        "valor_total":   _valor_total(html),
     }
+
+
+def _fmt_km_br(km: float) -> str:
+    """1052.4 → '1.052,4 km'  |  658.2 → '658,2 km'"""
+    inteiro = int(km)
+    decimal = round((km - inteiro) * 10)
+    inteiro_fmt = f"{inteiro:,}".replace(",", ".")
+    return f"{inteiro_fmt},{decimal} km"
 
 
 class AnttScraper(SiteScraper):
 
     def __init__(self, headless: bool = True):
-        self._headless = headless
-        self._pw       = None
-        self._browser  = None
-        self._page     = None   # página RotasBrasil (reutilizada entre linhas)
-        self._client: Optional[httpx.AsyncClient] = None
-        self._ativo    = False
+        self._ativo = False
 
     async def iniciar_sessao(self) -> None:
-        self._pw = await async_playwright().start()
-        self._browser = await self._pw.chromium.launch(
-            headless=self._headless,
-            slow_mo=0,
-            args=["--no-sandbox", "--disable-setuid-sandbox",
-                  "--disable-blink-features=AutomationControlled"],
-        )
-        ctx = await self._browser.new_context(
-            user_agent=_UA,
-            viewport={"width": 1366, "height": 768},
-            locale="pt-BR",
-        )
-        self._page = await ctx.new_page()
-        await self._page.goto(URL_RB, wait_until="networkidle", timeout=30000)
-
-        self._client = httpx.AsyncClient(
-            timeout=30,
-            follow_redirects=True,
-            headers={
-                "User-Agent": _UA,
-                "Accept": "text/html,application/xhtml+xml,*/*;q=0.8",
-                "Accept-Language": "pt-BR,pt;q=0.9",
-            },
-        )
         self._ativo = True
-        logger.info("AnttScraper: sessão iniciada (RotasBrasil + httpx ANTT)")
+        logger.info("AnttScraper: sessão iniciada (Nominatim + OSRM + httpx ANTT)")
 
     async def encerrar_sessao(self) -> None:
-        try:
-            if self._browser:
-                await self._browser.close()
-            if self._pw:
-                await self._pw.stop()
-        except Exception as e:
-            logger.warning(f"AnttScraper: erro ao fechar browser: {e}")
-        try:
-            if self._client:
-                await self._client.aclose()
-        except Exception as e:
-            logger.warning(f"AnttScraper: erro ao fechar httpx: {e}")
         self._ativo = False
 
     async def esta_ativo(self) -> bool:
         return self._ativo
 
     async def consultar(self, parametros: ParametrosRota, delay_segundos: int = 0) -> ResultadoRota:
-        # 1. Distância via RotasBrasil (ou valor manual da planilha)
-        if parametros.distancia_km:
-            distancia_int = int(parametros.distancia_km)
-            distancia_str = f"{distancia_int} km"
-            logger.debug(f"ANTT: distância manual {distancia_str}")
-        else:
-            distancia_str, distancia_int = await self._buscar_km(
-                parametros.origem, parametros.destino
-            )
-            logger.debug(f"ANTT: distância via RotasBrasil {distancia_str} → {distancia_int} km")
-
-        # 2. Mapeamento de parâmetros
         composicao, alto_desempenho = _TABELA_FLAGS.get(
             parametros.tabela_frete.upper(), (True, False)
         )
-        eixos = max((e for e in _EIXOS_VALIDOS if e <= parametros.eixos), default=2)
         retorno_vazio = getattr(parametros, "retorno_vazio", False)
+        eixos   = max((e for e in _EIXOS_VALIDOS if e <= parametros.eixos), default=2)
+        tc      = parametros.tipo_carga or "5"
+        tipo_id = int(tc) if tc.isdigit() else _TIPO_CARGA_NOME_IDS.get(tc, 5)
 
-        # 3. CSRF fresco para este conjunto de requisições
-        csrf = await self._obter_csrf()
-
-        # 4. Resolve tipo_carga: pode vir como ID numérico (form) ou nome (planilha)
-        tc = parametros.tipo_carga or "5"
-        if tc.isdigit():
-            tipo_id = int(tc)
+        if parametros.distancia_km:
+            distancia_int = int(parametros.distancia_km)
+            distancia_str = f"{distancia_int} km"
+            cache_rota = None
+            logger.debug(f"ANTT: distância manual {distancia_str}")
         else:
-            tipo_id = _TIPO_CARGA_NOME_IDS.get(tc, 5)
-        col_key = _TIPO_CARGA_COLS.get(tipo_id, f"Tipo_Carga_{tc}")
+            cache_rota = distancia_cache.buscar_completo(parametros.origem, parametros.destino)
+            if cache_rota:
+                distancia_str = cache_rota["km"]
+                distancia_int = distancia_cache._str_para_int(distancia_str)
+                logger.debug(f"ANTT: distância do cache {distancia_str}")
+            else:
+                distancia_str, distancia_int = await asyncio.to_thread(
+                    self._buscar_km_sync, parametros.origem, parametros.destino
+                )
+                cache_rota = distancia_cache.buscar_completo(parametros.origem, parametros.destino)
+                logger.debug(f"ANTT: distância {distancia_str} ({distancia_int} km)")
 
-        # 5. POST único para o tipo selecionado
-        payload = _montar_payload(
-            tipo_id, eixos, distancia_int,
-            composicao, alto_desempenho, retorno_vazio, csrf
+        r = await asyncio.to_thread(
+            self._calcular_sync, tipo_id, eixos, distancia_int,
+            composicao, alto_desempenho, retorno_vazio,
         )
-        try:
-            resp = await self._client.post(
-                URL_ANTT,
-                data=payload,
-                headers={
-                    "Content-Type": "application/x-www-form-urlencoded",
-                    "X-Requested-With": "XMLHttpRequest",
-                    "Referer": URL_ANTT,
-                },
-            )
-            resp.raise_for_status()
-            r = _parsear_resposta(resp.text)
-        except Exception as e:
-            logger.warning(f"ANTT: erro tipo_id={tipo_id}: {e}")
-            r = {}
 
-        tabela_nome       = r.get("tabela_nome", "")
-        ccd               = r.get("ccd", "")
-        cc                = r.get("cc", "")
-        valor_ida         = r.get("valor_ida", "")
-        valor_retorno_str = r.get("valor_retorno", "")
-        valor_total_str   = r.get("valor_total", "")
+        # Aproveita pedágio e praças do cache (salvo por QualP/RotasBrasil)
+        valor_pedagio_cache = cache_rota.get("pedagio", "") if cache_rota else ""
+        pedagios_cache      = [
+            {"nome": p["nome"], "tarifa": p["valor"], "por_eixo": p["valor_por_eixo"], "rodovia": p["rodovia"]}
+            for p in (cache_rota.get("pracas", []) if cache_rota else [])
+        ]
 
-        fretes: dict = {col_key: valor_total_str}
-        fretes["antt_ccd"] = ccd
-        fretes["antt_cc"]  = cc
+        col_key = _TIPO_CARGA_COLS.get(tipo_id, f"Tipo_Carga_{tc}")
+        fretes: dict = {col_key: r.get("valor_total", "")}
+        fretes["antt_ccd"]          = r.get("ccd", "")
+        fretes["antt_cc"]           = r.get("cc", "")
+        fretes["antt_valor_ida"]    = r.get("valor_ida", "")
+        fretes["antt_valor_retorno"]= r.get("valor_retorno", "")
 
         return ResultadoRota(
             tempo_viagem="",
             distancia_km=distancia_str,
-            rota_descricao=tabela_nome,
-            valor_pedagio=valor_ida,
-            valor_combustivel=valor_retorno_str,
-            valor_total=valor_total_str,
+            rota_descricao=r.get("tabela_nome", ""),
+            valor_pedagio=valor_pedagio_cache,
+            valor_combustivel="",
+            valor_total=r.get("valor_total", ""),
             fretes=fretes,
-            pedagios=[],
+            pedagios=pedagios_cache,
             consultado_em=datetime.now(timezone.utc).isoformat(),
         )
 
-    # ── Helpers privados ──────────────────────────────────────────────
+    # ── Helpers síncronos (rodam em asyncio.to_thread) ───────────────
 
-    async def _obter_csrf(self) -> str:
-        resp = await self._client.get(URL_ANTT)
-        m = re.search(
-            r'name="__RequestVerificationToken"\s+type="hidden"\s+value="([^"]+)"',
-            resp.text,
-        )
-        if not m:
-            m = re.search(r'__RequestVerificationToken[^>]*value="([^"]+)"', resp.text)
-        if not m:
-            raise RuntimeError("ANTT: CSRF token não encontrado na página")
-        return m.group(1)
+    def _geocodificar_sync(self, client: httpx.Client, endereco: str) -> tuple[float, float]:
+        """Nominatim: cidade → (lon, lat). Cache em memória por sessão."""
+        chave = endereco.lower().strip()
+        with _lock_geo:
+            if chave in _geo_mem:
+                return _geo_mem[chave]["lon"], _geo_mem[chave]["lat"]
 
-    async def _buscar_km(self, origem: str, destino: str) -> tuple[str, int]:
-        """
-        Preenche O/D no RotasBrasil (página já aberta), aguarda resultado,
-        extrai div.distance e retorna (str_original, int_km).
-        """
-        page = self._page
-        SEL_RESULTADO = "div.routeResult.active"
+        time.sleep(1.1)  # Nominatim: máx 1 req/s
+        resp = client.get(URL_NOMINATIM, params={
+            "q": endereco,
+            "format": "json",
+            "limit": 1,
+            "countrycodes": "br",
+        })
+        resp.raise_for_status()
+        dados = resp.json()
+        if not dados:
+            raise RuntimeError(f"Nominatim: endereço não encontrado: {endereco!r}")
+        lon = float(dados[0]["lon"])
+        lat = float(dados[0]["lat"])
+        with _lock_geo:
+            _geo_mem[chave] = {"lon": lon, "lat": lat}
+        logger.debug(f"ANTT/Nominatim: {endereco!r} → lon={lon} lat={lat}")
+        return lon, lat
 
-        # Limpa e preenche origem
-        await page.fill("#txtEnderecoPartida", "")
-        await page.type("#txtEnderecoPartida", origem, delay=random.randint(10, 25))
-        await page.wait_for_timeout(1200)
-        try:
-            loc = page.locator(".ui-autocomplete .ui-menu-item").first
-            await loc.wait_for(state="visible", timeout=3000)
-            await loc.click()
-            await page.locator(".ui-autocomplete").wait_for(state="hidden", timeout=2000)
-        except Exception:
-            await page.press("#txtEnderecoPartida", "Tab")
+    def _buscar_km_sync(self, origem: str, destino: str) -> tuple[str, int]:
+        """Busca distância: cache em disco primeiro, depois Nominatim + OSRM."""
+        cached = distancia_cache.buscar(origem, destino)
+        if cached:
+            return cached
 
-        # Limpa e preenche destino
-        await page.fill("#txtEnderecoChegada", "")
-        await page.type("#txtEnderecoChegada", destino, delay=random.randint(10, 25))
-        await page.wait_for_timeout(1200)
-        try:
-            loc = page.locator(".ui-autocomplete .ui-menu-item").first
-            await loc.wait_for(state="visible", timeout=3000)
-            await loc.click()
-            await page.locator(".ui-autocomplete").wait_for(state="hidden", timeout=2000)
-        except Exception:
-            await page.press("#txtEnderecoChegada", "Tab")
+        headers = {"User-Agent": _UA_APP, "Accept-Language": "pt-BR,pt;q=0.9"}
+        with httpx.Client(timeout=15, follow_redirects=True, headers=headers) as client:
+            lon1, lat1 = self._geocodificar_sync(client, origem)
+            lon2, lat2 = self._geocodificar_sync(client, destino)
 
-        # Se já existe resultado anterior, aguarda sumir antes de buscar
-        tem_anterior = await page.query_selector(SEL_RESULTADO) is not None
-        await page.evaluate("document.getElementById('btnSubmit').click()")
-        if tem_anterior:
-            try:
-                await page.wait_for_selector(SEL_RESULTADO, state="hidden", timeout=5000)
-            except Exception:
-                pass
+            resp = client.get(
+                f"{URL_OSRM}/{lon1},{lat1};{lon2},{lat2}",
+                params={"overview": "false"},
+            )
+            resp.raise_for_status()
+            dados = resp.json()
+            if dados.get("code") != "Ok" or not dados.get("routes"):
+                raise RuntimeError(f"OSRM sem rota: {dados.get('code')}")
 
-        await page.wait_for_selector(SEL_RESULTADO, state="visible", timeout=30000)
+            distancia_m   = dados["routes"][0]["distance"]
+            distancia_km  = distancia_m / 1000
+            distancia_int = round(distancia_km)
+            distancia_str = _fmt_km_br(distancia_km)
 
-        el = await page.query_selector("div.distance")
-        distancia_str = (await el.inner_text()).strip() if el else "0 km"
-
-        # "3.076,6 km" → 3076
-        num = re.sub(r"[^\d,]", "", distancia_str.split(",")[0].replace(".", ""))
-        distancia_int = int(num) if num else 0
-
+        distancia_cache.salvar(origem, destino, distancia_str, distancia_int)
         return distancia_str, distancia_int
+
+    def _calcular_sync(
+        self,
+        tipo_id: int, eixos: int, distancia_int: int,
+        composicao: bool, alto_desempenho: bool, retorno_vazio: bool,
+    ) -> dict:
+        """GET (CSRF) + POST (cálculo ANTT) — httpx síncrono."""
+        headers = {
+            "User-Agent": _UA_BROWSER,
+            "Accept": "text/html,application/xhtml+xml,*/*;q=0.8",
+            "Accept-Language": "pt-BR,pt;q=0.9",
+        }
+        try:
+            with httpx.Client(timeout=30, follow_redirects=True, headers=headers) as client:
+                resp_get = client.get(URL_ANTT)
+                m = re.search(
+                    r'name="__RequestVerificationToken"\s+type="hidden"\s+value="([^"]+)"',
+                    resp_get.text,
+                )
+                if not m:
+                    m = re.search(r'__RequestVerificationToken[^>]*value="([^"]+)"', resp_get.text)
+                if not m:
+                    raise RuntimeError("CSRF token não encontrado")
+                csrf = m.group(1)
+
+                payload = _montar_payload(
+                    tipo_id, eixos, distancia_int,
+                    composicao, alto_desempenho, retorno_vazio, csrf,
+                )
+                resp_post = client.post(
+                    URL_ANTT,
+                    content=urllib.parse.urlencode(payload).encode(),
+                    headers={
+                        "Content-Type": "application/x-www-form-urlencoded",
+                        "Referer": URL_ANTT,
+                        "Origin": "https://calculadorafrete.antt.gov.br",
+                    },
+                )
+                logger.info(f"ANTT: POST status={resp_post.status_code}")
+                resp_post.raise_for_status()
+                r = _parsear_resposta(resp_post.text)
+                logger.info(
+                    f"ANTT: parsed → tabela={r.get('tabela_nome')!r} "
+                    f"total={r.get('valor_total')!r} ccd={r.get('ccd')!r}"
+                )
+                if not r.get("valor_total"):
+                    logger.warning(f"ANTT: resposta vazia — primeiros 500 chars:\n{resp_post.text[:500]}")
+                return r
+        except Exception as e:
+            logger.error(f"ANTT: erro HTTP tipo_id={tipo_id}: {e}")
+            return {}

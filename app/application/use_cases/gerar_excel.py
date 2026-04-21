@@ -19,15 +19,18 @@ class GerarExcelUseCase:
         cotacoes: list[Cotacao],
         arquivo_entrada_path: str,
         validade_cache_horas: int = 0,
+        site_id: str = "",
     ) -> str:
         """
         Gera o Excel de resultado mesclando dados originais + resultados.
         Retorna o caminho do arquivo gerado.
-        Nome: cotacao_[NOME]_[YYYY-MM-DD]_[HH-MM].xlsx
+        Nome: [SITE]_[YYYY-MM-DD]_[HH-MM]_[TITULO].xlsx
         """
-        nome_limpo = lote.nome.replace(" ", "_").upper()
+        _SITE_PREFIX = {"antt": "ANTT", "qualp": "QUALP", "rotasbrasil": "RTBRSIL"}
+        prefixo = _SITE_PREFIX.get(site_id.lower(), "COTACAO")
+        titulo = lote.nome.replace(" ", "_").upper()
         agora = datetime.now().strftime("%Y-%m-%d_%H-%M")
-        nome_arquivo = f"cotacao_{nome_limpo}_{agora}.xlsx"
+        nome_arquivo = f"{prefixo}_{agora}_{titulo}.xlsx"
 
         output_dir = Path(settings.outputs_dir)
         output_dir.mkdir(parents=True, exist_ok=True)

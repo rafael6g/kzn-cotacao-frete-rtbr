@@ -35,6 +35,7 @@ from app.domain.exceptions import (
 )
 from app.core.config import get_settings
 from app.core.logging_config import get_logger
+from app.infrastructure.cache import distancia_cache
 
 logger = get_logger(__name__)
 settings = get_settings()
@@ -183,6 +184,12 @@ class RotasBrasilScraper(SiteScraper):
             await self._page.select_option(SEL_SELECT_CARGA, "todas")
             await self._submeter_formulario(delay_segundos=delay_segundos)
             resultado = await self._extrair_resultado()
+            distancia_cache.salvar(
+                params.origem, params.destino,
+                resultado.distancia_km,
+                pedagio=resultado.valor_pedagio,
+                pedagios=resultado.pedagios,
+            )
             return resultado
 
         except CaptchaDetectadoError:

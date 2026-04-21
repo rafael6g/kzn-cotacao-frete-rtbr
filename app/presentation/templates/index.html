@@ -1,399 +1,387 @@
 {% extends "base.html" %}
 {% block title %}Nova Cotação{% endblock %}
 
-{% block main_class %}{% endblock %}
+{% block main_class %}p-0{% endblock %}
 
 {% block content %}
 
-<!-- ══════════════════════════════════════════════════════════
-     HERO SECTION
-══════════════════════════════════════════════════════════ -->
-<section class="relative overflow-hidden" style="min-height: 320px;">
+<div class="flex" style="height: calc(100vh - 4rem); overflow: hidden;">
 
-  <!-- Gradient background mesh -->
-  <div class="absolute inset-0 -z-10"
-       style="background: radial-gradient(ellipse 80% 60% at 20% 40%, rgba(191,24,27,0.20) 0%, transparent 60%),
-                          radial-gradient(ellipse 60% 80% at 80% 70%, rgba(120,15,15,0.15) 0%, transparent 55%),
-                          linear-gradient(160deg, #0d0808 0%, #160c0c 50%, #0d0808 100%);"></div>
+  <!-- ══════════════════════════════════════════════════════════
+       LEFT PANEL: Hero
+  ══════════════════════════════════════════════════════════ -->
+  <aside class="hidden lg:flex flex-col justify-between w-80 xl:w-96 flex-none px-8 py-8 relative overflow-hidden"
+         style="background: radial-gradient(ellipse 110% 80% at 10% 50%, rgba(191,24,27,0.18) 0%, transparent 65%),
+                            linear-gradient(160deg, #100808 0%, #1a0c0c 100%);
+                border-right: 1px solid rgba(255,255,255,0.06);">
 
-  <!-- Grid lines (decorative) -->
-  <div class="absolute inset-0 -z-10 opacity-8"
-       style="background-image: linear-gradient(rgba(191,24,27,0.3) 1px, transparent 1px),
-                                 linear-gradient(90deg, rgba(191,24,27,0.3) 1px, transparent 1px);
-              background-size: 60px 60px;"></div>
+    <!-- Grid decoration -->
+    <div class="absolute inset-0 pointer-events-none"
+         style="opacity:0.07;
+                background-image: linear-gradient(rgba(191,24,27,0.5) 1px, transparent 1px),
+                                   linear-gradient(90deg, rgba(191,24,27,0.5) 1px, transparent 1px);
+                background-size: 48px 48px;"></div>
 
-  <!-- Glowing orb -->
-  <div class="absolute top-0 right-0 -z-10 h-80 w-80 rounded-full opacity-15 blur-3xl"
-       style="background: radial-gradient(circle, #BF181B 0%, transparent 70%); transform: translate(30%, -30%);"></div>
+    <!-- Glow orb -->
+    <div class="absolute top-1/3 -right-16 w-56 h-56 rounded-full pointer-events-none"
+         style="background: #BF181B; opacity: 0.08; filter: blur(48px);"></div>
 
-  <div class="container mx-auto px-6 py-16 max-w-5xl">
-    <div class="flex flex-col md:flex-row items-center gap-10">
-
-      <!-- Left: Headline -->
-      <div class="flex-1 text-center md:text-left">
-        <!-- Badge -->
-        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium tracking-widest uppercase mb-4"
-             style="background: rgba(191,24,27,0.15); border: 1px solid rgba(191,24,27,0.35); color: #f5a0a0;">
-          <span class="h-1.5 w-1.5 rounded-full animate-pulse inline-block" style="background:#BF181B;"></span>
-          Automação Inteligente
-        </div>
-
-        <h1 class="text-4xl md:text-5xl font-extrabold leading-tight text-white tracking-tight">
-          Cotações de Frete<br>
-          <span style="background: linear-gradient(90deg, #BF181B, #E92320); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
-            em Segundos
-          </span>
-        </h1>
-
-        <p class="mt-4 text-gray-400 text-base leading-relaxed max-w-md mx-auto md:mx-0">
-          Envie sua planilha com origens e destinos. O sistema consulta o
-          <strong class="text-gray-300">rotasbrasil.com.br</strong> automaticamente,
-          aplica cache inteligente e entrega o Excel completo com pedágio,
-          combustível e frete calculados.
-        </p>
+    <!-- Top: badge + headline + desc -->
+    <div>
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium tracking-widest uppercase mb-5"
+           style="background: rgba(191,24,27,0.15); border: 1px solid rgba(191,24,27,0.35); color: #f5a0a0;">
+        <span class="h-1.5 w-1.5 rounded-full animate-pulse inline-block" style="background:#BF181B;"></span>
+        Automação Inteligente
       </div>
 
-      <!-- Right: Truck illustration (SVG) -->
-      <div class="hidden md:flex flex-none items-center justify-center w-72">
-        <svg viewBox="0 0 300 180" xmlns="http://www.w3.org/2000/svg" class="w-full opacity-90">
-          <!-- Road -->
-          <rect x="0" y="140" width="300" height="40" rx="4" fill="#2e1a1a"/>
-          <!-- Road dashes -->
-          <rect x="30" y="157" width="40" height="5" rx="2" fill="#BF181B" opacity="0.6"/>
-          <rect x="100" y="157" width="40" height="5" rx="2" fill="#BF181B" opacity="0.6"/>
-          <rect x="170" y="157" width="40" height="5" rx="2" fill="#BF181B" opacity="0.6"/>
-          <rect x="240" y="157" width="40" height="5" rx="2" fill="#BF181B" opacity="0.6"/>
-          <!-- Trailer -->
-          <rect x="10" y="80" width="175" height="65" rx="6" fill="#2e1b1b"/>
-          <rect x="10" y="80" width="175" height="65" rx="6" fill="none" stroke="#BF181B" stroke-width="1.5"/>
-          <!-- Trailer stripes -->
-          <rect x="15" y="85" width="165" height="4" rx="2" fill="#BF181B" opacity="0.3"/>
-          <!-- Cab -->
-          <rect x="185" y="95" width="100" height="50" rx="6" fill="#301616"/>
-          <rect x="185" y="95" width="100" height="50" rx="6" fill="none" stroke="#E92320" stroke-width="1.5"/>
-          <!-- Windshield -->
-          <rect x="250" y="100" width="30" height="25" rx="3" fill="#1f0d0d" stroke="#E92320" stroke-width="1"/>
-          <!-- Cab glow -->
-          <rect x="250" y="100" width="30" height="25" rx="3" fill="#E92320" opacity="0.05"/>
-          <!-- Headlights -->
-          <rect x="282" y="105" width="8" height="5" rx="2" fill="#f5a0a0" opacity="0.9"/>
-          <rect x="282" y="115" width="8" height="5" rx="2" fill="#f5a0a0" opacity="0.9"/>
-          <!-- Light rays -->
-          <line x1="290" y1="107" x2="300" y2="103" stroke="#f5a0a0" stroke-width="1" opacity="0.5"/>
-          <line x1="290" y1="118" x2="300" y2="120" stroke="#f5a0a0" stroke-width="1" opacity="0.5"/>
-          <!-- Wheels -->
-          <circle cx="55" cy="142" r="12" fill="#1a0f0f" stroke="#E92320" stroke-width="2"/>
-          <circle cx="55" cy="142" r="5" fill="#BF181B"/>
-          <circle cx="140" cy="142" r="12" fill="#1a0f0f" stroke="#E92320" stroke-width="2"/>
-          <circle cx="140" cy="142" r="5" fill="#BF181B"/>
-          <circle cx="215" cy="142" r="12" fill="#1a0f0f" stroke="#E92320" stroke-width="2"/>
-          <circle cx="215" cy="142" r="5" fill="#BF181B"/>
-          <circle cx="265" cy="142" r="12" fill="#1a0f0f" stroke="#E92320" stroke-width="2"/>
-          <circle cx="265" cy="142" r="5" fill="#BF181B"/>
-          <!-- Connector -->
-          <rect x="183" y="128" width="5" height="8" rx="1" fill="#BF181B"/>
-          <!-- Exhaust glow -->
-          <circle cx="195" cy="92" r="6" fill="#E92320" opacity="0.08"/>
-          <circle cx="195" cy="85" r="4" fill="#E92320" opacity="0.05"/>
-        </svg>
-      </div>
+      <h1 class="text-3xl xl:text-4xl font-extrabold leading-tight text-white tracking-tight">
+        Cotações de Frete<br>
+        <span style="background: linear-gradient(90deg, #BF181B, #E92320); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+          em Segundos
+        </span>
+      </h1>
 
+      <p class="mt-4 text-gray-400 text-sm leading-relaxed">
+        Envie sua planilha com origens e destinos. O sistema consulta automaticamente,
+        aplica cache inteligente e entrega o Excel com pedágio,
+        combustível e frete calculados.
+      </p>
     </div>
-  </div>
-</section>
 
-<!-- ══════════════════════════════════════════════════════════
-     MAIN CONTENT
-══════════════════════════════════════════════════════════ -->
-<div class="container mx-auto px-4 pb-16 max-w-5xl space-y-6">
-
-  <!-- Download template strip -->
-  <div class="glass-card px-5 py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
-    <div class="flex items-center gap-3">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-brand flex-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+    <!-- Middle: Truck illustration -->
+    <div class="flex items-center justify-center py-2">
+      <svg viewBox="0 0 300 180" xmlns="http://www.w3.org/2000/svg" class="w-full max-w-xs opacity-90">
+        <rect x="0" y="140" width="300" height="40" rx="4" fill="#2e1a1a"/>
+        <rect x="30" y="157" width="40" height="5" rx="2" fill="#BF181B" opacity="0.6"/>
+        <rect x="100" y="157" width="40" height="5" rx="2" fill="#BF181B" opacity="0.6"/>
+        <rect x="170" y="157" width="40" height="5" rx="2" fill="#BF181B" opacity="0.6"/>
+        <rect x="240" y="157" width="40" height="5" rx="2" fill="#BF181B" opacity="0.6"/>
+        <rect x="10" y="80" width="175" height="65" rx="6" fill="#2e1b1b"/>
+        <rect x="10" y="80" width="175" height="65" rx="6" fill="none" stroke="#BF181B" stroke-width="1.5"/>
+        <rect x="15" y="85" width="165" height="4" rx="2" fill="#BF181B" opacity="0.3"/>
+        <rect x="185" y="95" width="100" height="50" rx="6" fill="#301616"/>
+        <rect x="185" y="95" width="100" height="50" rx="6" fill="none" stroke="#E92320" stroke-width="1.5"/>
+        <rect x="250" y="100" width="30" height="25" rx="3" fill="#1f0d0d" stroke="#E92320" stroke-width="1"/>
+        <rect x="250" y="100" width="30" height="25" rx="3" fill="#E92320" opacity="0.05"/>
+        <rect x="282" y="105" width="8" height="5" rx="2" fill="#f5a0a0" opacity="0.9"/>
+        <rect x="282" y="115" width="8" height="5" rx="2" fill="#f5a0a0" opacity="0.9"/>
+        <line x1="290" y1="107" x2="300" y2="103" stroke="#f5a0a0" stroke-width="1" opacity="0.5"/>
+        <line x1="290" y1="118" x2="300" y2="120" stroke="#f5a0a0" stroke-width="1" opacity="0.5"/>
+        <circle cx="55" cy="142" r="12" fill="#1a0f0f" stroke="#E92320" stroke-width="2"/>
+        <circle cx="55" cy="142" r="5" fill="#BF181B"/>
+        <circle cx="140" cy="142" r="12" fill="#1a0f0f" stroke="#E92320" stroke-width="2"/>
+        <circle cx="140" cy="142" r="5" fill="#BF181B"/>
+        <circle cx="215" cy="142" r="12" fill="#1a0f0f" stroke="#E92320" stroke-width="2"/>
+        <circle cx="215" cy="142" r="5" fill="#BF181B"/>
+        <circle cx="265" cy="142" r="12" fill="#1a0f0f" stroke="#E92320" stroke-width="2"/>
+        <circle cx="265" cy="142" r="5" fill="#BF181B"/>
+        <rect x="183" y="128" width="5" height="8" rx="1" fill="#BF181B"/>
+        <circle cx="195" cy="92" r="6" fill="#E92320" opacity="0.08"/>
+        <circle cx="195" cy="85" r="4" fill="#E92320" opacity="0.05"/>
       </svg>
-      <span class="text-sm text-gray-300">
-        Baixe o modelo — a planilha precisa ter apenas as colunas
-        <code class="ml-1 px-1.5 py-0.5 rounded text-xs" style="background:rgba(191,24,27,0.15);color:#f5a0a0;">origem</code>
-        <code class="mx-1 px-1.5 py-0.5 rounded text-xs" style="background:rgba(191,24,27,0.15);color:#f5a0a0;">destino</code>
-        — os demais parâmetros vêm do formulário acima.
-      </span>
     </div>
-    <a href="/modelo" download
-       class="btn btn-sm btn-brand flex-none gap-2 whitespace-nowrap">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-      </svg>
-      Baixar Modelo (.xlsx)
-    </a>
-  </div>
 
-  <!-- Form card -->
-  <div class="glass-card p-6 md:p-8">
+    <!-- Bottom: sources note -->
+    <div class="text-xs text-gray-600 flex items-center gap-2">
+      <span class="h-px flex-1" style="background: rgba(191,24,27,0.3);"></span>
+      <span> &copy; 2026 </span>
+      <span class="h-px flex-1" style="background: rgba(191,24,27,0.3);"></span>
+    </div>
 
-    <!-- Card header -->
-    <div class="flex items-center gap-3 mb-6">
-      <div class="flex items-center justify-center h-10 w-10 rounded-lg flex-none"
-           style="background: rgba(191,24,27,0.15); border: 1px solid rgba(191,24,27,0.3);">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+  </aside>
+
+  <!-- ══════════════════════════════════════════════════════════
+       RIGHT PANEL: Form (ocupa todo o espaço disponível)
+  ══════════════════════════════════════════════════════════ -->
+  <div class="flex-1 flex flex-col min-w-0 overflow-hidden p-4 gap-3"
+       style="background: radial-gradient(ellipse 80% 60% at 80% 20%, rgba(191,24,27,0.07) 0%, transparent 60%), #0d0808;">
+
+    <!-- Download template strip -->
+    <div class="glass-card px-4 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-2 flex-none">
+      <div class="flex items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-brand flex-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
         </svg>
+        <span class="text-xs text-gray-400">
+          Baixe a planilha de exemplo para começar — ela já contém as colunas obrigatórias
+          <code class="ml-1 px-1.5 py-0.5 rounded text-xs" style="background:rgba(191,24,27,0.15);color:#f5a0a0;">origem</code>
+          <code class="mx-1 px-1.5 py-0.5 rounded text-xs" style="background:rgba(191,24,27,0.15);color:#f5a0a0;">destino</code>
+        </span>
       </div>
-      <div>
-        <h2 class="text-xl font-bold text-white">Nova Cotação em Lote</h2>
-        <p class="text-xs text-gray-500 mt-0.5">Preencha os parâmetros e envie a planilha para iniciar</p>
-      </div>
+      <a href="/modelo" download
+         class="btn btn-xs btn-brand flex-none gap-1.5 whitespace-nowrap">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+        </svg>
+        Baixar Modelo
+      </a>
     </div>
 
-    <!-- Form -->
-    <form
-      hx-post="/cotacoes"
-      hx-encoding="multipart/form-data"
-      hx-target="#painel-progresso"
-      hx-swap="innerHTML"
-      hx-indicator="#spinner"
-      hx-request='{"timeout": 30000}'
-      onsubmit="abrirModalProgresso()"
-      class="space-y-5"
-    >
+    <!-- Form card: flex-1 preenche toda a altura restante -->
+    <div class="glass-card flex-1 flex flex-col p-5 overflow-hidden">
 
-      <!-- Row 1: Nome + Config -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div class="form-control">
-          <label class="label pb-1">
-            <span class="label-text text-gray-300 text-sm font-medium">Nome da Cotação <span class="text-red-400">*</span></span>
-          </label>
-          <input
-            type="text" name="nome_cotacao" required
-            placeholder="Ex: Paraná — Semana 15"
-            class="input input-bordered input-sm bg-black/30 border-white/10 text-white placeholder-gray-600 focus:border-red-800"
-          />
+      <!-- Card header -->
+      <div class="flex items-center gap-3 mb-4 flex-none">
+        <div class="flex items-center justify-center h-9 w-9 rounded-lg flex-none"
+             style="background: rgba(191,24,27,0.15); border: 1px solid rgba(191,24,27,0.3);">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+          </svg>
         </div>
-        <div class="form-control">
-          <label class="label pb-1">
-            <span class="label-text text-gray-300 text-sm font-medium">Tipo de Consulta <span class="text-red-400">*</span></span>
+        <div>
+          <h2 class="text-base font-bold text-white">Nova Cotação em Lote</h2>
+          <p class="text-xs text-gray-500 mt-0.5">Preencha os parâmetros e envie a planilha</p>
+        </div>
+      </div>
+
+      <!-- Form: flex-1 preenche o restante do card, submit fica no rodapé -->
+      <form
+        hx-post="/cotacoes"
+        hx-encoding="multipart/form-data"
+        hx-target="#painel-progresso"
+        hx-swap="innerHTML"
+        hx-indicator="#spinner"
+        hx-request='{"timeout": 30000}'
+        onsubmit="abrirModalProgresso()"
+        class="flex-1 flex flex-col"
+      >
+        <!-- Campos superiores -->
+        <div class="space-y-3 flex-1">
+
+          <!-- Row 1: Nome + Config -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div class="form-control">
+              <label class="label pb-1 pt-0">
+                <span class="label-text text-gray-300 text-xs font-medium">Nome da Cotação <span class="text-red-400">*</span></span>
+              </label>
+              <input
+                type="text" name="nome_cotacao" required
+                placeholder="Ex: Paraná — Semana 15"
+                class="input input-bordered input-sm bg-black/30 border-white/10 text-white placeholder-gray-600 focus:border-red-800"
+              />
+            </div>
+            <div class="form-control">
+              <label class="label pb-1 pt-0">
+                <span class="label-text text-gray-300 text-xs font-medium">Tipo de Consulta <span class="text-red-400">*</span></span>
+              </label>
+              <div class="cs-wrap" id="cs-site">
+                <button type="button" class="cs-btn" onclick="csToggle(this)">
+                  <span class="cs-label">{% if configs %}{{ configs[0].nome }}{% if configs[0].descricao %} — {{ configs[0].descricao }}{% endif %}{% else %}Selecione...{% endif %}</span>
+                  <svg class="cs-chevron" fill="none" viewBox="0 0 20 20" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 8l4 4 4-4"/></svg>
+                </button>
+                <ul class="cs-list hidden">
+                  {% for config in configs %}
+                  <li class="cs-opt{% if loop.first %} cs-selected{% endif %}"
+                      data-value="{{ config.id }}"
+                      data-tipo="{% if 'antt.gov.br' in config.url_base %}antt{% elif 'qualp.com.br' in config.url_base %}qualp{% else %}rotasbrasil{% endif %}"
+                      onclick="csSelect(this)">{{ config.nome }}{% if config.descricao %} — {{ config.descricao }}{% endif %}</li>
+                  {% else %}
+                  <li class="cs-opt" style="opacity:0.5;pointer-events:none">Nenhuma configuração cadastrada</li>
+                  {% endfor %}
+                </ul>
+                <input type="hidden" name="config_id" class="cs-input" value="{{ configs[0].id if configs else '' }}" required>
+              </div>
+            </div>
+          </div>
+
+          <!-- Divider -->
+          <div class="flex items-center gap-3">
+            <div class="flex-1 h-px section-divider"></div>
+            <span class="text-xs text-gray-600 uppercase tracking-widest">Parâmetros do Lote</span>
+            <div class="flex-1 h-px section-divider"></div>
+          </div>
+
+          <!-- Row 2: Vehicle params -->
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div class="form-control">
+              <label class="label pb-1 pt-0">
+                <span class="label-text text-gray-400 text-xs font-medium">Veículo</span>
+              </label>
+              <div class="cs-wrap" id="cs-veiculo">
+                <button type="button" class="cs-btn" onclick="csToggle(this)">
+                  <span class="cs-label">Caminhão</span>
+                  <svg class="cs-chevron" fill="none" viewBox="0 0 20 20" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 8l4 4 4-4"/></svg>
+                </button>
+                <ul class="cs-list hidden">
+                  <li class="cs-opt" data-value="1" onclick="csSelect(this)">Carro</li>
+                  <li class="cs-opt cs-selected" data-value="2" onclick="csSelect(this)">Caminhão</li>
+                  <li class="cs-opt" data-value="3" onclick="csSelect(this)">Ônibus</li>
+                  <li class="cs-opt" data-value="4" onclick="csSelect(this)">Moto</li>
+                </ul>
+                <input type="hidden" name="veiculo" class="cs-input" value="2">
+              </div>
+            </div>
+            <div class="form-control">
+              <label class="label pb-1 pt-0">
+                <span class="label-text text-gray-400 text-xs font-medium">Eixos</span>
+              </label>
+              <div class="cs-wrap" id="cs-eixos">
+                <button type="button" class="cs-btn" onclick="csToggle(this)">
+                  <span class="cs-label">6 eixos</span>
+                  <svg class="cs-chevron" fill="none" viewBox="0 0 20 20" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 8l4 4 4-4"/></svg>
+                </button>
+                <ul class="cs-list hidden">
+                  {% for n in range(2, 11) %}
+                  <li class="cs-opt{% if n == 6 %} cs-selected{% endif %}" data-value="{{ n }}" onclick="csSelect(this)">{{ n }} eixos</li>
+                  {% endfor %}
+                </ul>
+                <input type="hidden" name="eixos" class="cs-input" value="6">
+              </div>
+            </div>
+            <div class="form-control">
+              <label class="label pb-1 pt-0">
+                <span class="label-text text-gray-400 text-xs font-medium">Combustível (R$/L)</span>
+              </label>
+              <input type="number" name="preco_combustivel" step="0.01" value="7.25" required
+                class="input input-bordered input-sm bg-black/30 border-white/10 text-gray-200 focus:border-red-800" />
+            </div>
+            <div class="form-control">
+              <label class="label pb-1 pt-0">
+                <span class="label-text text-gray-400 text-xs font-medium">Consumo (km/L)</span>
+              </label>
+              <input type="number" name="consumo_km_l" step="0.01" value="2.50" required
+                class="input input-bordered input-sm bg-black/30 border-white/10 text-gray-200 focus:border-red-800" />
+            </div>
+          </div>
+
+          <!-- Row 3: Delay + Tabela Frete + Tipos de Carga -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div id="bloco-delay" class="form-control">
+              <label class="label pb-1 pt-0">
+                <span class="label-text text-gray-400 text-xs font-medium">Delay entre consultas (s)</span>
+                <span class="label-text-alt">
+                  <span class="badge badge-xs" style="background:rgba(234,179,8,0.2);color:#ca8a04;border:none;">Evita bloqueio</span>
+                </span>
+              </label>
+              <input id="input-delay" type="number" name="delay_segundos" min="1" max="120" value="{{ delay_padrao }}" required
+                class="input input-bordered input-sm bg-black/30 border-white/10 text-gray-200 focus:border-red-800" />
+            </div>
+            <div id="bloco-tabela-frete" class="form-control">
+              <label class="label pb-1 pt-0">
+                <span class="label-text text-gray-400 text-xs font-medium">Tabela Frete ANTT</span>
+              </label>
+              <div class="cs-wrap" id="cs-tabela-frete">
+                <button type="button" class="cs-btn" onclick="csToggle(this)">
+                  <span class="cs-label">A — Lotação (caminhão + carreta)</span>
+                  <svg class="cs-chevron" fill="none" viewBox="0 0 20 20" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 8l4 4 4-4"/></svg>
+                </button>
+                <ul class="cs-list hidden">
+                  <!-- preenchido por atualizarTabelaFrete() -->
+                </ul>
+                <input type="hidden" name="tabela_frete" class="cs-input" value="A">
+              </div>
+            </div>
+            <div class="form-control">
+              <label class="label pb-1 pt-0">
+                <span class="label-text text-gray-400 text-xs font-medium">Tipos de Carga</span>
+              </label>
+              <div id="bloco-tipos-auto" class="input input-bordered input-sm bg-black/20 border-white/10 text-gray-500 flex items-center text-xs px-3">
+                Todos os 12 tipos extraídos automaticamente
+              </div>
+              <div class="cs-wrap hidden" id="cs-tipo-carga">
+                <button type="button" class="cs-btn" onclick="csToggle(this)">
+                  <span class="cs-label">Carga Geral</span>
+                  <svg class="cs-chevron" fill="none" viewBox="0 0 20 20" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 8l4 4 4-4"/></svg>
+                </button>
+                <ul class="cs-list hidden">
+                  <li class="cs-opt cs-selected" data-value="5"  onclick="csSelect(this)">Carga Geral</li>
+                  <li class="cs-opt" data-value="12" onclick="csSelect(this)">Carga Granel Pressurizada</li>
+                  <li class="cs-opt" data-value="4"  onclick="csSelect(this)">Conteinerizada</li>
+                  <li class="cs-opt" data-value="3"  onclick="csSelect(this)">Frigorificada ou Aquecida</li>
+                  <li class="cs-opt" data-value="2"  onclick="csSelect(this)">Granel líquido</li>
+                  <li class="cs-opt" data-value="1"  onclick="csSelect(this)">Granel sólido</li>
+                  <li class="cs-opt" data-value="6"  onclick="csSelect(this)">Neogranel</li>
+                  <li class="cs-opt" data-value="11" onclick="csSelect(this)">Perigosa (carga geral)</li>
+                  <li class="cs-opt" data-value="10" onclick="csSelect(this)">Perigosa (conteinerizada)</li>
+                  <li class="cs-opt" data-value="9"  onclick="csSelect(this)">Perigosa (Frigorificada ou Aquecida)</li>
+                  <li class="cs-opt" data-value="8"  onclick="csSelect(this)">Perigosa (granel líquido)</li>
+                  <li class="cs-opt" data-value="7"  onclick="csSelect(this)">Perigosa (granel sólido)</li>
+                </ul>
+                <input type="hidden" name="tipo_carga" class="cs-input" value="5" disabled>
+              </div>
+            </div>
+          </div>
+
+          <!-- Retorno Vazio (só aparece quando ANTT selecionado) -->
+          <div id="bloco-retorno-vazio" class="hidden">
+            <label class="flex items-center gap-3 cursor-pointer select-none group">
+              <input type="checkbox" name="retorno_vazio" id="check-retorno-vazio" value="true"
+                     class="checkbox checkbox-sm"
+                     style="border-color: rgba(191,24,27,0.5); --chkbg: #BF181B;" />
+              <div>
+                <span class="text-sm text-gray-300 group-hover:text-white transition-colors">Retorno Vazio</span>
+                <span class="block text-xs text-gray-600">Adiciona 0,92 × distância × CCD ao valor total</span>
+              </div>
+            </label>
+          </div>
+
+          <!-- Divider -->
+          <div class="flex items-center gap-3">
+            <div class="flex-1 h-px section-divider"></div>
+            <span class="text-xs text-gray-600 uppercase tracking-widest">Arquivo de Entrada</span>
+            <div class="flex-1 h-px section-divider"></div>
+          </div>
+
+          <!-- File upload -->
+          <div class="form-control">
+            <label class="label pb-1 pt-0">
+              <span class="label-text text-gray-300 text-xs font-medium">Planilha Excel / CSV <span class="text-red-400">*</span></span>
+            </label>
+            <input type="file" name="arquivo" accept=".xlsx,.xls,.csv" required
+              class="file-input file-input-bordered file-input-sm w-full bg-black/30 border-white/10 text-gray-400
+                     file:bg-red-900/60 file:border-none file:text-red-200 file:text-xs file:font-medium
+                     hover:file:bg-red-800/60" />
+            <label class="label pt-1">
+              <span class="label-text-alt text-gray-600 text-xs">Formatos aceitos: .xlsx, .xls, .csv — colunas obrigatórias: origem, destino</span>
+            </label>
+          </div>
+
+        </div><!-- /space-y-3 flex-1 -->
+
+        <!-- Submit row: empurrado para o rodapé do card -->
+        <div class="flex items-center justify-between gap-3 pt-4 mt-auto flex-wrap"
+             style="border-top: 1px solid rgba(255,255,255,0.06);">
+
+          {% if not is_production %}
+          <label class="flex items-center gap-2 cursor-pointer select-none group">
+            <input type="checkbox" name="modo_visivel" value="true" id="modo_visivel"
+                   class="checkbox checkbox-sm"
+                   style="border-color: rgba(191,24,27,0.5); --chkbg: #BF181B;" />
+            <div>
+              <span class="text-sm text-gray-300 group-hover:text-white transition-colors">Modo Visível</span>
+              <span class="block text-xs text-gray-600">Abre o navegador para acompanhar o scraping</span>
+            </div>
           </label>
-          <div class="cs-wrap" id="cs-site">
-            <button type="button" class="cs-btn" onclick="csToggle(this)">
-              <span class="cs-label">{% if configs %}{{ configs[0].nome }}{% if configs[0].descricao %} — {{ configs[0].descricao }}{% endif %}{% else %}Selecione...{% endif %}</span>
-              <svg class="cs-chevron" fill="none" viewBox="0 0 20 20" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 8l4 4 4-4"/></svg>
+          {% endif %}
+
+          <div class="flex items-center gap-3 {% if is_production %}ml-auto{% endif %}">
+            <span id="spinner" class="loading loading-spinner loading-sm text-brand htmx-indicator"></span>
+            <button type="submit" class="btn btn-sm btn-brand gap-2 px-6">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+              </svg>
+              Iniciar Processamento
             </button>
-            <ul class="cs-list hidden">
-              {% for config in configs %}
-              <li class="cs-opt{% if loop.first %} cs-selected{% endif %}"
-                  data-value="{{ config.id }}"
-                  data-tipo="{% if 'antt.gov.br' in config.url_base %}antt{% elif 'qualp.com.br' in config.url_base %}qualp{% else %}rotasbrasil{% endif %}"
-                  onclick="csSelect(this)">{{ config.nome }}{% if config.descricao %} — {{ config.descricao }}{% endif %}</li>
-              {% else %}
-              <li class="cs-opt" style="opacity:0.5;pointer-events:none">Nenhuma configuração cadastrada</li>
-              {% endfor %}
-            </ul>
-            <input type="hidden" name="config_id" class="cs-input" value="{{ configs[0].id if configs else '' }}" required>
           </div>
         </div>
-      </div>
 
-      <!-- Divider with label -->
-      <div class="flex items-center gap-3 pt-1">
-        <div class="flex-1 h-px section-divider"></div>
-        <span class="text-xs text-gray-600 uppercase tracking-widest">Parâmetros do Lote</span>
-        <div class="flex-1 h-px section-divider"></div>
-      </div>
+      </form>
+    </div><!-- /glass-card form -->
 
-      <!-- Row 2: Vehicle params -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div class="form-control">
-          <label class="label pb-1">
-            <span class="label-text text-gray-400 text-xs font-medium">Veículo</span>
-          </label>
-          <div class="cs-wrap" id="cs-veiculo">
-            <button type="button" class="cs-btn" onclick="csToggle(this)">
-              <span class="cs-label">Caminhão</span>
-              <svg class="cs-chevron" fill="none" viewBox="0 0 20 20" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 8l4 4 4-4"/></svg>
-            </button>
-            <ul class="cs-list hidden">
-              <li class="cs-opt" data-value="1" onclick="csSelect(this)">Carro</li>
-              <li class="cs-opt cs-selected" data-value="2" onclick="csSelect(this)">Caminhão</li>
-              <li class="cs-opt" data-value="3" onclick="csSelect(this)">Ônibus</li>
-              <li class="cs-opt" data-value="4" onclick="csSelect(this)">Moto</li>
-            </ul>
-            <input type="hidden" name="veiculo" class="cs-input" value="2">
-          </div>
-        </div>
-        <div class="form-control">
-          <label class="label pb-1">
-            <span class="label-text text-gray-400 text-xs font-medium">Eixos</span>
-          </label>
-          <div class="cs-wrap" id="cs-eixos">
-            <button type="button" class="cs-btn" onclick="csToggle(this)">
-              <span class="cs-label">6 eixos</span>
-              <svg class="cs-chevron" fill="none" viewBox="0 0 20 20" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 8l4 4 4-4"/></svg>
-            </button>
-            <ul class="cs-list hidden">
-              {% for n in range(2, 11) %}
-              <li class="cs-opt{% if n == 6 %} cs-selected{% endif %}" data-value="{{ n }}" onclick="csSelect(this)">{{ n }} eixos</li>
-              {% endfor %}
-            </ul>
-            <input type="hidden" name="eixos" class="cs-input" value="6">
-          </div>
-        </div>
-        <div class="form-control">
-          <label class="label pb-1">
-            <span class="label-text text-gray-400 text-xs font-medium">Combustível (R$/L)</span>
-          </label>
-          <input type="number" name="preco_combustivel" step="0.01" value="7.25" required
-            class="input input-bordered input-sm bg-black/30 border-white/10 text-gray-200 focus:border-red-800" />
-        </div>
-        <div class="form-control">
-          <label class="label pb-1">
-            <span class="label-text text-gray-400 text-xs font-medium">Consumo (km/L)</span>
-          </label>
-          <input type="number" name="consumo_km_l" step="0.01" value="2.50" required
-            class="input input-bordered input-sm bg-black/30 border-white/10 text-gray-200 focus:border-red-800" />
-        </div>
-      </div>
-
-      <!-- Row 3: Delay + Tabela Frete + Tipos de Carga -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div id="bloco-delay" class="form-control">
-          <label class="label pb-1">
-            <span class="label-text text-gray-400 text-xs font-medium">
-              Delay entre consultas (s)
-            </span>
-            <span class="label-text-alt">
-              <span class="badge badge-xs" style="background:rgba(234,179,8,0.2);color:#ca8a04;border:none;">Evita bloqueio</span>
-            </span>
-          </label>
-          <input id="input-delay" type="number" name="delay_segundos" min="1" max="120" value="{{ delay_padrao }}" required
-            class="input input-bordered input-sm bg-black/30 border-white/10 text-gray-200 focus:border-red-800" />
-        </div>
-        <div id="bloco-tabela-frete" class="form-control">
-          <label class="label pb-1">
-            <span class="label-text text-gray-400 text-xs font-medium">Tabela Frete ANTT</span>
-          </label>
-          <div class="cs-wrap" id="cs-tabela-frete">
-            <button type="button" class="cs-btn" onclick="csToggle(this)">
-              <span class="cs-label">A — Lotação (caminhão + carreta)</span>
-              <svg class="cs-chevron" fill="none" viewBox="0 0 20 20" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 8l4 4 4-4"/></svg>
-            </button>
-            <ul class="cs-list hidden">
-              <!-- preenchido por atualizarTabelaFrete() -->
-            </ul>
-            <input type="hidden" name="tabela_frete" class="cs-input" value="A">
-          </div>
-        </div>
-        <div class="form-control">
-          <label class="label pb-1">
-            <span class="label-text text-gray-400 text-xs font-medium">Tipos de Carga</span>
-          </label>
-          <!-- QualP / RotasBrasil: leitura automática dos 12 tipos -->
-          <div id="bloco-tipos-auto" class="input input-bordered input-sm bg-black/20 border-white/10 text-gray-500 flex items-center text-xs px-3">
-            Todos os 12 tipos extraídos automaticamente
-          </div>
-          <!-- ANTT: seleciona um tipo específico -->
-          <div class="cs-wrap hidden" id="cs-tipo-carga">
-            <button type="button" class="cs-btn" onclick="csToggle(this)">
-              <span class="cs-label">Carga Geral</span>
-              <svg class="cs-chevron" fill="none" viewBox="0 0 20 20" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 8l4 4 4-4"/></svg>
-            </button>
-            <ul class="cs-list hidden">
-              <li class="cs-opt cs-selected" data-value="5"  onclick="csSelect(this)">Carga Geral</li>
-              <li class="cs-opt" data-value="12" onclick="csSelect(this)">Carga Granel Pressurizada</li>
-              <li class="cs-opt" data-value="4"  onclick="csSelect(this)">Conteinerizada</li>
-              <li class="cs-opt" data-value="3"  onclick="csSelect(this)">Frigorificada ou Aquecida</li>
-              <li class="cs-opt" data-value="2"  onclick="csSelect(this)">Granel líquido</li>
-              <li class="cs-opt" data-value="1"  onclick="csSelect(this)">Granel sólido</li>
-              <li class="cs-opt" data-value="6"  onclick="csSelect(this)">Neogranel</li>
-              <li class="cs-opt" data-value="11" onclick="csSelect(this)">Perigosa (carga geral)</li>
-              <li class="cs-opt" data-value="10" onclick="csSelect(this)">Perigosa (conteinerizada)</li>
-              <li class="cs-opt" data-value="9"  onclick="csSelect(this)">Perigosa (Frigorificada ou Aquecida)</li>
-              <li class="cs-opt" data-value="8"  onclick="csSelect(this)">Perigosa (granel líquido)</li>
-              <li class="cs-opt" data-value="7"  onclick="csSelect(this)">Perigosa (granel sólido)</li>
-            </ul>
-            <input type="hidden" name="tipo_carga" class="cs-input" value="5" disabled>
-          </div>
-        </div>
-      </div>
-
-      <!-- Row ANTT: Retorno Vazio (só aparece quando ANTT selecionado) -->
-      <div id="bloco-retorno-vazio" class="hidden">
-        <label class="flex items-center gap-3 cursor-pointer select-none group">
-          <input type="checkbox" name="retorno_vazio" id="check-retorno-vazio" value="true"
-                 class="checkbox checkbox-sm"
-                 style="border-color: rgba(191,24,27,0.5); --chkbg: #BF181B;" />
-          <div>
-            <span class="text-sm text-gray-300 group-hover:text-white transition-colors">Retorno Vazio</span>
-            <span class="block text-xs text-gray-600">Adiciona 0,92 × distância × CCD ao valor total</span>
-          </div>
-        </label>
-      </div>
-
-      <!-- Divider -->
-      <div class="flex items-center gap-3 pt-1">
-        <div class="flex-1 h-px section-divider"></div>
-        <span class="text-xs text-gray-600 uppercase tracking-widest">Arquivo de Entrada</span>
-        <div class="flex-1 h-px section-divider"></div>
-      </div>
-
-      <!-- File upload -->
-      <div class="form-control">
-        <label class="label pb-1">
-          <span class="label-text text-gray-300 text-sm font-medium">Planilha Excel / CSV <span class="text-red-400">*</span></span>
-        </label>
-        <input type="file" name="arquivo" accept=".xlsx,.xls,.csv" required
-          class="file-input file-input-bordered file-input-sm w-full bg-black/30 border-white/10 text-gray-400
-                 file:bg-red-900/60 file:border-none file:text-red-200 file:text-xs file:font-medium
-                 hover:file:bg-red-800/60" />
-        <label class="label pt-1">
-          <span class="label-text-alt text-gray-600 text-xs">Formatos aceitos: .xlsx, .xls, .csv — colunas obrigatórias: origem, destino</span>
-        </label>
-      </div>
-
-      <!-- Submit row -->
-      <div class="flex items-center justify-between gap-3 pt-2 flex-wrap">
-
-        <!-- Modo visível toggle — apenas em desenvolvimento -->
-        {% if not is_production %}
-        <label class="flex items-center gap-2 cursor-pointer select-none group">
-          <input type="checkbox" name="modo_visivel" value="true" id="modo_visivel"
-                 class="checkbox checkbox-sm"
-                 style="border-color: rgba(191,24,27,0.5); --chkbg: #BF181B;" />
-          <div>
-            <span class="text-sm text-gray-300 group-hover:text-white transition-colors">Modo Visível</span>
-            <span class="block text-xs text-gray-600">Abre o navegador para acompanhar o scraping</span>
-          </div>
-        </label>
-        {% endif %}
-
-        <div class="flex items-center gap-3">
-          <span id="spinner" class="loading loading-spinner loading-sm text-brand htmx-indicator"></span>
-          <button type="submit" class="btn btn-sm btn-brand gap-2 px-6">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-            </svg>
-            Iniciar Processamento
-          </button>
-        </div>
-      </div>
-
-    </form>
-  </div>
+  </div><!-- /right panel -->
 
 </div>
 
 <!-- ══════════════════════════════════════════════════════════
-     MODAL DE PROGRESSO (preenchido via HTMX após o envio)
+     MODAL DE PROGRESSO
 ══════════════════════════════════════════════════════════ -->
 <div id="modal-progresso"
      class="hidden fixed inset-0 z-50 flex items-center justify-center p-4"
      style="background: rgba(0,0,0,0.80); backdrop-filter: blur(6px);">
 
-  <!-- Card -->
   <div class="glass-card w-full max-w-2xl flex flex-col"
        style="max-height: 90vh; border-color: rgba(191,24,27,0.35);">
 
-    <!-- Header -->
     <div class="flex items-center justify-between px-6 py-4 flex-none"
          style="border-bottom: 1px solid rgba(255,255,255,0.06);">
       <div class="flex items-center gap-3">
@@ -411,9 +399,7 @@
       </button>
     </div>
 
-    <!-- Body — preenchido pelo HTMX -->
     <div class="flex-1 overflow-y-auto">
-      <!-- Estado inicial antes do HTMX injetar o painel -->
       <div id="painel-aguardando" class="p-6 text-center text-gray-500 text-sm">
         <div class="loading loading-dots loading-sm text-brand mb-2"></div>
         <div>Aguardando servidor...</div>
@@ -453,13 +439,9 @@
     var isQualp = tipo === 'qualp';
     var opcoes  = isAntt ? _TABELAS_ANTT : isQualp ? _TABELAS_QUALP : _TABELAS_ROTABRASIL;
 
-    // Atualiza opções da Tabela Frete (custom select)
     csSetOptions('cs-tabela-frete', opcoes);
-
-    // Veículo: desabilita custom select para ANTT
     csSetDisabled('cs-veiculo', isAntt);
 
-    // Combustível / Consumo: inputs simples — desabilita visualmente para ANTT
     ['preco_combustivel', 'consumo_km_l'].forEach(function(nome) {
       var el = document.querySelector('[name="' + nome + '"]');
       if (!el) return;
@@ -468,18 +450,15 @@
       if (fc) fc.style.opacity = isAntt ? '0.35' : '1';
     });
 
-    // Delay: ANTT pode ser menor
     var inputDelay = document.getElementById('input-delay');
     if (inputDelay && isAntt && inputDelay.value > 5) inputDelay.value = 2;
 
-    // Retorno Vazio: só aparece para ANTT
     var blocoRV = document.getElementById('bloco-retorno-vazio');
     if (blocoRV) {
       blocoRV.classList.toggle('hidden', !isAntt);
       if (!isAntt) document.getElementById('check-retorno-vazio').checked = false;
     }
 
-    // Tipos de Carga
     var tipoAuto = document.getElementById('bloco-tipos-auto');
     if (tipoAuto) tipoAuto.classList.toggle('hidden', isAntt);
     csSetHidden('cs-tipo-carga', !isAntt);
@@ -502,7 +481,6 @@
     document.getElementById('painel-progresso').classList.add('hidden');
     document.getElementById('painel-progresso').innerHTML = '';
 
-    // Contador de tempo
     clearInterval(_timerInterval);
     var t0 = Date.now();
     var timerEl = document.getElementById('modal-timer');
@@ -520,7 +498,6 @@
     document.getElementById('painel-progresso').innerHTML = '';
   }
 
-  // Quando HTMX injeta o painel de progresso, esconde o "aguardando" e mostra o painel
   document.body.addEventListener('htmx:afterSwap', function(e) {
     if (e.detail.target && e.detail.target.id === 'painel-progresso') {
       document.getElementById('painel-aguardando').classList.add('hidden');
@@ -528,12 +505,10 @@
     }
   });
 
-  // Permite fechar clicando no backdrop
   document.getElementById('modal-progresso').addEventListener('click', function(e) {
     if (e.target === this) fecharModalProgresso();
   });
 
-  // Escuta evento "fim" do SSE para atualizar o header do modal
   document.body.addEventListener('htmx:sseMessage', function(e) {
     try {
       var data = JSON.parse(e.detail.data);
