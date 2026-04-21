@@ -159,6 +159,7 @@ async def criar_cotacao(
     modo_visivel: bool = Form(default=False),
     tabela_frete: str = Form(default="A"),
     retorno_vazio: bool = Form(default=False),
+    tipo_carga: str = Form(default="todas"),
 ):
     repo = get_xano_repository()
     excel_svc = get_excel_service()
@@ -226,6 +227,7 @@ async def criar_cotacao(
             ),
             site=site_id,
             tabela_frete=str(linha.get("tabela_frete", tabela_frete)).strip().upper() or tabela_frete,
+            tipo_carga=str(linha.get("tipo_carga", tipo_carga)).strip() or tipo_carga,
             retorno_vazio=bool(linha.get("retorno_vazio", retorno_vazio)),
             distancia_km=float(linha["distancia_km"]) if linha.get("distancia_km") else None,
         )

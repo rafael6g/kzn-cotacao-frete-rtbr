@@ -25,7 +25,7 @@ logger = get_logger(__name__)
 URL_ANTT = "https://calculadorafrete.antt.gov.br/"
 URL_RB   = "https://rotasbrasil.com.br"
 
-# Tipo de carga ANTT → chave de coluna Excel (mesma do QualP/RotasBrasil)
+# ID numérico ANTT → chave de coluna Excel (mesma do QualP/RotasBrasil)
 _TIPO_CARGA_COLS = {
     1:  "Tipo_Carga_Granel Sólido",
     2:  "Tipo_Carga_Granel Líquido",
@@ -39,6 +39,22 @@ _TIPO_CARGA_COLS = {
     10: "Tipo_Carga_Perigosa (conteinerizada)",
     11: "Tipo_Carga_Perigosa (carga geral)",
     12: "Tipo_Carga_Granel Pressurizada",
+}
+
+# Nome do dropdown ANTT → ID numérico
+_TIPO_CARGA_NOME_IDS = {
+    "Granel sólido": 1,
+    "Granel líquido": 2,
+    "Frigorificada ou Aquecida": 3,
+    "Conteinerizada": 4,
+    "Carga Geral": 5,
+    "Neogranel": 6,
+    "Perigosa (granel sólido)": 7,
+    "Perigosa (granel líquido)": 8,
+    "Perigosa (Frigorificada ou Aquecida)": 9,
+    "Perigosa (conteinerizada)": 10,
+    "Perigosa (carga geral)": 11,
+    "Carga Granel Pressurizada": 12,
 }
 
 # tabela_frete A/B/C/D → (composicao_veicular, alto_desempenho)
@@ -186,55 +202,45 @@ class AnttScraper(SiteScraper):
         # 3. CSRF fresco para este conjunto de requisições
         csrf = await self._obter_csrf()
 
-        # 4. POST para cada um dos 12 tipos de carga
-        fretes: dict = {}
-        tabela_nome = ""
-        ccd = ""
-        cc = ""
-        valor_ida = ""
-        valor_retorno_str = ""
-        valor_total_str = ""
+        # 4. Resolve tipo_carga: pode vir como ID numérico (form) ou nome (planilha)
+        tc = parametros.tipo_carga or "5"
+        if tc.isdigit():
+            tipo_id = int(tc)
+        else:
+            tipo_id = _TIPO_CARGA_NOME_IDS.get(tc, 5)
+        col_key = _TIPO_CARGA_COLS.get(tipo_id, f"Tipo_Carga_{tc}")
 
-        for idx, (tipo_id, col_key) in enumerate(_TIPO_CARGA_COLS.items(), start=1):
-            # Renova CSRF a cada 4 requests (ASP.NET pode invalidar o token)
-            if idx > 1 and (idx - 1) % 4 == 0:
-                csrf = await self._obter_csrf()
-
-            payload = _montar_payload(
-                tipo_id, eixos, distancia_int,
-                composicao, alto_desempenho, retorno_vazio, csrf
+        # 5. POST único para o tipo selecionado
+        payload = _montar_payload(
+            tipo_id, eixos, distancia_int,
+            composicao, alto_desempenho, retorno_vazio, csrf
+        )
+        try:
+            resp = await self._client.post(
+                URL_ANTT,
+                data=payload,
+                headers={
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "X-Requested-With": "XMLHttpRequest",
+                    "Referer": URL_ANTT,
+                },
             )
-            try:
-                resp = await self._client.post(
-                    URL_ANTT,
-                    data=payload,
-                    headers={
-                        "Content-Type": "application/x-www-form-urlencoded",
-                        "X-Requested-With": "XMLHttpRequest",
-                        "Referer": URL_ANTT,
-                    },
-                )
-                resp.raise_for_status()
-                r = _parsear_resposta(resp.text)
+            resp.raise_for_status()
+            r = _parsear_resposta(resp.text)
+        except Exception as e:
+            logger.warning(f"ANTT: erro tipo_id={tipo_id}: {e}")
+            r = {}
 
-                # Captura metadados do primeiro tipo bem-sucedido
-                if not tabela_nome and r.get("tabela_nome"):
-                    tabela_nome    = r["tabela_nome"]
-                    ccd            = r.get("ccd", "")
-                    cc             = r.get("cc", "")
-                    valor_ida      = r.get("valor_ida", "")
-                    valor_retorno_str = r.get("valor_retorno", "")
-                    valor_total_str   = r.get("valor_total", "")
+        tabela_nome       = r.get("tabela_nome", "")
+        ccd               = r.get("ccd", "")
+        cc                = r.get("cc", "")
+        valor_ida         = r.get("valor_ida", "")
+        valor_retorno_str = r.get("valor_retorno", "")
+        valor_total_str   = r.get("valor_total", "")
 
-                fretes[col_key] = r.get("valor_total", "")
-
-            except Exception as e:
-                logger.warning(f"ANTT: erro tipo_id={tipo_id}: {e}")
-                fretes[col_key] = ""
-
-        # Injeta metadados ANTT no dict de fretes (colunas extras no Excel)
-        fretes["antt_ccd"]   = ccd
-        fretes["antt_cc"]    = cc
+        fretes: dict = {col_key: valor_total_str}
+        fretes["antt_ccd"] = ccd
+        fretes["antt_cc"]  = cc
 
         return ResultadoRota(
             tempo_viagem="",

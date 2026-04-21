@@ -259,9 +259,26 @@
           <label class="label pb-1">
             <span class="label-text text-gray-400 text-xs font-medium">Tipos de Carga</span>
           </label>
-          <div class="input input-bordered input-sm bg-black/20 border-white/10 text-gray-500 flex items-center text-xs px-3">
+          <!-- QualP / RotasBrasil: leitura automática dos 12 tipos -->
+          <div id="bloco-tipos-auto" class="input input-bordered input-sm bg-black/20 border-white/10 text-gray-500 flex items-center text-xs px-3">
             Todos os 12 tipos extraídos automaticamente
           </div>
+          <!-- ANTT: seleciona um tipo específico -->
+          <select id="select-tipo-carga" name="tipo_carga"
+                  class="hidden select select-bordered select-sm bg-black/30 border-white/10 text-gray-200 focus:border-red-800">
+            <option value="5">Carga Geral</option>
+            <option value="12">Carga Granel Pressurizada</option>
+            <option value="4">Conteinerizada</option>
+            <option value="3">Frigorificada ou Aquecida</option>
+            <option value="2">Granel líquido</option>
+            <option value="1">Granel sólido</option>
+            <option value="6">Neogranel</option>
+            <option value="11">Perigosa (carga geral)</option>
+            <option value="10">Perigosa (conteinerizada)</option>
+            <option value="9">Perigosa (Frigorificada ou Aquecida)</option>
+            <option value="8">Perigosa (granel líquido)</option>
+            <option value="7">Perigosa (granel sólido)</option>
+          </select>
         </div>
       </div>
 
@@ -427,6 +444,12 @@
       blocoRV.classList.toggle('hidden', !isAntt);
       if (!isAntt) document.getElementById('check-retorno-vazio').checked = false;
     }
+
+    // Tipos de Carga: estático para QualP/RotasBrasil, dropdown para ANTT
+    var tipoAuto = document.getElementById('bloco-tipos-auto');
+    var tipoSel  = document.getElementById('select-tipo-carga');
+    if (tipoAuto) tipoAuto.classList.toggle('hidden', isAntt);
+    if (tipoSel)  tipoSel.classList.toggle('hidden', !isAntt);
   }
   document.addEventListener('DOMContentLoaded', atualizarTabelaFrete);
 
