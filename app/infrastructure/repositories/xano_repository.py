@@ -180,7 +180,7 @@ class XanoRepository(CotacaoRepository):
         data = await self._get(self._ep_lote, params={"per_page": limite})
         items = data if isinstance(data, list) else data.get("items", [])
         lotes = [self._map_lote(d) for d in items]
-        return sorted(lotes, key=lambda l: l.created_at or datetime.min, reverse=True)
+        return sorted(lotes, key=lambda l: l.created_at or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
 
     def _map_lote(self, d: dict) -> LoteCotacao:
         created_raw = d.get("created_at")
