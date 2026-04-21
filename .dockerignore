@@ -1,0 +1,10 @@
+.venv/
+.env
+.git/
+__pycache__/
+*.pyc
+.qualp_session.json
+outputs/
+uploads/
+logs/
+*.md
