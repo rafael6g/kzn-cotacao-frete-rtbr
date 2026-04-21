@@ -28,6 +28,7 @@ class XanoRepository(CotacaoRepository):
         self._ep_lote = settings.xano_ep_lote
         self._ep_cache = settings.xano_ep_cache
         self._ep_item = settings.xano_ep_item
+        self._ep_historico = settings.xano_ep_historico
         self._client = httpx.AsyncClient(timeout=15.0)
 
     # ── helpers ──────────────────────────────────────────────────────
@@ -178,9 +179,20 @@ class XanoRepository(CotacaoRepository):
     async def listar_lotes(self, limite: int = 50) -> list[LoteCotacao]:
         data = await self._get(self._ep_lote, params={"per_page": limite})
         items = data if isinstance(data, list) else data.get("items", [])
-        return [self._map_lote(d) for d in items]
+        lotes = [self._map_lote(d) for d in items]
+        return sorted(lotes, key=lambda l: l.created_at or datetime.min, reverse=True)
 
     def _map_lote(self, d: dict) -> LoteCotacao:
+        created_raw = d.get("created_at")
+        created_at = None
+        if created_raw:
+            try:
+                if isinstance(created_raw, (int, float)):
+                    created_at = datetime.fromtimestamp(created_raw / 1000, tz=timezone.utc)
+                else:
+                    created_at = datetime.fromisoformat(str(created_raw).replace(" ", "T").rstrip("+0000") + "+00:00")
+            except Exception:
+                pass
         lote = LoteCotacao(
             id=d.get("id"),
             nome=d.get("nome", ""),
@@ -194,8 +206,30 @@ class XanoRepository(CotacaoRepository):
             linhas_cache=d.get("linhas_cache", 0),
             linhas_consultadas=d.get("linhas_consultadas", 0),
             linhas_erro=d.get("linhas_erro", 0),
+            created_at=created_at,
         )
         return lote
+
+    # ── Histórico Excel ───────────────────────────────────────────────
+
+    async def salvar_historico(self, lote_id: int, nome: str, dados: list) -> None:
+        try:
+            await self._post(self._ep_historico, {
+                "lote_id": lote_id,
+                "nome": nome,
+                "dados": dados,
+            })
+        except Exception as e:
+            logger.warning(f"Falha ao salvar historico_excel: {e}")
+
+    async def buscar_historico(self, lote_id: int) -> Optional[list]:
+        try:
+            data = await self._get(f"{self._ep_historico}/{lote_id}")
+            return data.get("dados")
+        except XanoApiError as e:
+            if e.status_code == 404:
+                return None
+            raise
 
     # ── Itens ─────────────────────────────────────────────────────────
 

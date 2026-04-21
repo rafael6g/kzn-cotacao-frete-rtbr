@@ -300,6 +300,20 @@ async def _executar_processamento(
                 lote_result.arquivo_saida = Path(arquivo_saida).name
                 await repo.atualizar_lote(lote_result)
 
+                # Salva snapshot no Xano para download futuro (após redeploy)
+                dados_historico = [
+                    {
+                        "linha_numero": c.linha_numero,
+                        "parametros": c.parametros.to_dict(),
+                        "resultado": c.resultado.to_dict() if c.resultado else None,
+                        "status": c.status.value,
+                        "fonte": c.fonte.value if c.fonte else None,
+                        "erro_mensagem": c.erro_mensagem,
+                    }
+                    for c in cotacoes
+                ]
+                await repo.salvar_historico(lote_result.id, lote_result.nome, dados_historico)
+
                 # Remove upload após processamento concluído
                 try:
                     Path(arquivo_path).unlink(missing_ok=True)
@@ -369,8 +383,45 @@ async def download_excel(lote_id: int):
         raise HTTPException(404, "Arquivo não encontrado.")
 
     caminho = Path(settings.outputs_dir) / lote.arquivo_saida
+
     if not caminho.exists():
-        raise HTTPException(404, "Arquivo expirado ou removido.")
+        # Tenta regenerar a partir do snapshot salvo no Xano
+        dados = await repo.buscar_historico(lote_id)
+        if not dados:
+            raise HTTPException(404, "Arquivo expirado e histórico não encontrado.")
+
+        from app.domain.entities.cotacao import Cotacao, StatusCotacao, FonteResultado
+        from app.domain.value_objects.parametros_rota import ParametrosRota
+        from app.domain.value_objects.resultado_rota import ResultadoRota
+        from app.application.use_cases.gerar_excel import GerarExcelUseCase
+
+        cotacoes_regen = []
+        for row in dados:
+            p = row.get("parametros", {})
+            r = row.get("resultado")
+            cotacoes_regen.append(Cotacao(
+                lote_id=lote_id,
+                linha_numero=row.get("linha_numero", 0),
+                parametros=ParametrosRota(
+                    origem=p.get("origem", ""),
+                    destino=p.get("destino", ""),
+                    veiculo=p.get("veiculo", 2),
+                    eixos=p.get("eixos", 6),
+                    preco_combustivel=p.get("preco_combustivel", 0),
+                    consumo_km_l=p.get("consumo_km_l", 0),
+                    tipo_carga=p.get("tipo_carga", "todas"),
+                    site=p.get("site", ""),
+                ),
+                resultado=ResultadoRota.from_dict(r) if r else None,
+                status=StatusCotacao(row.get("status", "aguardando")),
+                fonte=FonteResultado(row["fonte"]) if row.get("fonte") else None,
+                erro_mensagem=row.get("erro_mensagem"),
+            ))
+
+        excel_svc = get_excel_service()
+        gerar = GerarExcelUseCase(excel_svc)
+        arquivo_saida = await gerar.executar(lote, cotacoes_regen, "", validade_cache_horas=0)
+        caminho = Path(arquivo_saida)
 
     return FileResponse(
         path=str(caminho),

@@ -5,6 +5,7 @@
       <tr>
         <th>ID</th>
         <th>Nome</th>
+        <th>Data</th>
         <th>Status</th>
         <th>Total</th>
         <th>Cache</th>
@@ -19,6 +20,11 @@
       <tr>
         <td class="font-mono text-xs text-gray-400">#{{ lote.id }}</td>
         <td class="font-semibold">{{ lote.nome }}</td>
+        <td class="text-xs text-gray-400 whitespace-nowrap">
+          {% if lote.created_at %}
+            {{ lote.created_at.strftime('%d/%m/%Y %H:%M') }}
+          {% else %}—{% endif %}
+        </td>
         <td>
           {% if lote.status.value == "concluido" %}
             <span class="badge badge-success badge-sm">✓ Concluído</span>

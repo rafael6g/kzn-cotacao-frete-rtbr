@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     xano_ep_lote: str = "/lote_cotacao"
     xano_ep_cache: str = "/cache_consulta"
     xano_ep_item: str = "/item_cotacao"
+    xano_ep_historico: str = "/historico_excel"
 
     # Playwright
     playwright_headless: bool = True
