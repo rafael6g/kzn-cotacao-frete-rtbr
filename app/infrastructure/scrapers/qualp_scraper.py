@@ -621,6 +621,11 @@ class QualPScraper(SiteScraper):
                 state="visible", timeout=settings.playwright_resultado_timeout_ms
             )
         except PlaywrightTimeout:
+            try:
+                await self._page.screenshot(path="outputs/debug_resultado.png", full_page=False)
+                logger.error("QualP: timeout resultado — screenshot salvo em outputs/debug_resultado.png")
+            except Exception:
+                pass
             raise TimeoutConsultaError("QualP: timeout aguardando resultado da rota.")
 
         if delay_segundos > 0:
