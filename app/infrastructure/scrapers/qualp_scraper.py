@@ -514,11 +514,11 @@ class QualPScraper(SiteScraper):
                     inp.dispatchEvent(new Event('change', {bubbles: true}));
                 }
             """)
-            await self._page.wait_for_timeout(_j(300))
+            await self._page.wait_for_timeout(_j(200))
             await container.click()
-            await self._page.wait_for_timeout(_j(400))
-            await self._page.keyboard.type(termo, delay=_j(100))
-            await self._page.wait_for_timeout(_j(600))
+            await self._page.wait_for_timeout(_j(200))
+            await self._page.keyboard.type(termo, delay=_j(50))
+            await self._page.wait_for_timeout(_j(300))
             cidade = termo.split(",")[0].strip()
             await self._selecionar_primeira_sugestao("origem", cidade)
             self._form["origem"] = endereco
@@ -545,11 +545,11 @@ class QualPScraper(SiteScraper):
                     inp.dispatchEvent(new Event('change', {bubbles: true}));
                 }
             """)
-            await self._page.wait_for_timeout(_j(300))
+            await self._page.wait_for_timeout(_j(200))
             await campo.click(force=True)
-            await self._page.wait_for_timeout(_j(400))
-            await self._page.keyboard.type(termo, delay=_j(100))
-            await self._page.wait_for_timeout(_j(600))
+            await self._page.wait_for_timeout(_j(200))
+            await self._page.keyboard.type(termo, delay=_j(50))
+            await self._page.wait_for_timeout(_j(300))
             cidade = termo.split(",")[0].strip()
             await self._selecionar_primeira_sugestao("destino", cidade)
             self._form["destino"] = endereco
