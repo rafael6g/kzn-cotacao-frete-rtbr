@@ -518,6 +518,15 @@ class QualPScraper(SiteScraper):
             await container.click()
             await self._page.wait_for_timeout(_j(200))
             await self._page.keyboard.type(termo, delay=_j(50))
+            # Força evento input no Vue.js — headless não dispara reatividade via keyboard.type
+            await self._page.evaluate("""
+                () => {
+                    const inp = document.querySelector("input[placeholder='Origem']");
+                    if (!inp) return;
+                    inp.dispatchEvent(new Event('input', {bubbles: true}));
+                    inp.dispatchEvent(new KeyboardEvent('keyup', {key: 's', bubbles: true}));
+                }
+            """)
             await self._page.wait_for_timeout(_j(300))
             cidade = termo.split(",")[0].strip()
             await self._selecionar_primeira_sugestao("origem", cidade)
@@ -549,6 +558,15 @@ class QualPScraper(SiteScraper):
             await campo.click(force=True)
             await self._page.wait_for_timeout(_j(200))
             await self._page.keyboard.type(termo, delay=_j(50))
+            # Força evento input no Vue.js — headless não dispara reatividade via keyboard.type
+            await self._page.evaluate("""
+                () => {
+                    const inp = document.querySelector("input[placeholder='Destino'], input[placeholder='Destino 1']");
+                    if (!inp) return;
+                    inp.dispatchEvent(new Event('input', {bubbles: true}));
+                    inp.dispatchEvent(new KeyboardEvent('keyup', {key: 's', bubbles: true}));
+                }
+            """)
             await self._page.wait_for_timeout(_j(300))
             cidade = termo.split(",")[0].strip()
             await self._selecionar_primeira_sugestao("destino", cidade)
