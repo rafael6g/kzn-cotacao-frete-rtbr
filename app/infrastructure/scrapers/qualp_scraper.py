@@ -615,7 +615,7 @@ class QualPScraper(SiteScraper):
         # Aguarda o container da tabela de resultado aparecer
         try:
             await self._page.locator(SEL_RESULT_TABLE).first.wait_for(
-                state="visible", timeout=settings.playwright_timeout_ms
+                state="visible", timeout=settings.playwright_resultado_timeout_ms
             )
         except PlaywrightTimeout:
             raise TimeoutConsultaError("QualP: timeout aguardando resultado da rota.")

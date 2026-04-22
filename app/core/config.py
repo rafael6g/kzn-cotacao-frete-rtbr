@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     # Playwright
     playwright_headless: bool = True
     playwright_timeout_ms: int = 30000
+    playwright_resultado_timeout_ms: int = 90000  # espera pelo resultado da rota (rotas longas podem demorar 60s+)
     playwright_slow_mo_ms: int = 0
 
     # QualP
