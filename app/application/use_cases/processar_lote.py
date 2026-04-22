@@ -190,12 +190,11 @@ class ProcessarLoteUseCase:
                         })
 
                     finally:
-                        # Delay dinâmico: garante que o ciclo total (consulta + espera) ≈ delay_configurado.
-                        # Mínimo de 8s mesmo que a consulta tenha demorado mais que o delay.
-                        if lote.delay_segundos > 0:
-                            elapsed = time.monotonic() - _t0_consulta
-                            espera = max(8.0, lote.delay_segundos - elapsed)
-                            await asyncio.sleep(espera)
+                        # Pausa mínima de segurança: só espera se o ciclo inteiro foi muito rápido.
+                        # Rotas longas já têm espaçamento natural pelo tempo de cálculo do QualP.
+                        elapsed = time.monotonic() - _t0_consulta
+                        if elapsed < settings.min_ciclo_segundos:
+                            await asyncio.sleep(settings.min_ciclo_segundos - elapsed)
 
                 lote.linhas_processadas = idx
 

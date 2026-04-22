@@ -40,6 +40,7 @@ class Settings(BaseSettings):
 
     # Processamento
     delay_padrao_segundos: int = 10
+    min_ciclo_segundos: float = 5.0  # pausa mínima entre consultas; rotas longas já têm espaçamento natural
     max_retentativas: int = 2
     uploads_dir: str = "uploads"
     outputs_dir: str = "outputs"
