@@ -26,7 +26,8 @@ from fastapi.responses import HTMLResponse, StreamingResponse, FileResponse
 from fastapi.templating import Jinja2Templates
 
 from app.core.config import get_settings, BASE_DIR
-from app.core.dependencies import get_xano_repository, get_excel_service
+from app.core.dependencies import get_xano_repository, get_excel_service, get_usuario_atual
+from app.infrastructure.auth.kzn_auth import UsuarioAtual
 from app.infrastructure.repositories.xano_repository import XanoRepository
 from app.core.logging_config import get_logger
 from app.domain.entities.cotacao import Cotacao, StatusCotacao
@@ -160,6 +161,7 @@ async def criar_cotacao(
     tabela_frete: str = Form(default="A"),
     retorno_vazio: bool = Form(default=False),
     tipo_carga: str = Form(default="todas"),
+    usuario: UsuarioAtual = Depends(get_usuario_atual),
 ):
     repo = get_xano_repository()
     excel_svc = get_excel_service()
@@ -194,6 +196,7 @@ async def criar_cotacao(
     # Cria o lote no Xano
     lote = LoteCotacao(
         nome=nome_cotacao,
+        empresa_id=usuario.empresa_id,
         configuracao_site_id=config_id,
         total_linhas=len(linhas),
         delay_segundos=delay_segundos,
@@ -435,4 +438,14 @@ async def download_excel(lote_id: int):
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
 
+
+@router.get("/debug/screenshot/{nome}")
+async def debug_screenshot(nome: str):
+    """Serve screenshots de debug do Playwright (apenas arquivos em outputs/)."""
+    safe = Path(nome).name  # evita path traversal
+    for ext in ("", ".png", ".jpg"):
+        path = Path(settings.outputs_dir) / f"{safe}{ext}"
+        if path.exists() and path.suffix in (".png", ".jpg", ".jpeg"):
+            return FileResponse(path, media_type="image/png")
+    raise HTTPException(404, f"Screenshot '{safe}' não encontrado em outputs/")
 

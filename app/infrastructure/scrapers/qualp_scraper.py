@@ -618,6 +618,23 @@ class QualPScraper(SiteScraper):
 
     async def _submeter(self, delay_segundos: int) -> None:
         """Clica no botão CALCULAR e aguarda o resultado aparecer."""
+        # Screenshot ANTES de clicar — mostra se origem/destino foram preenchidos
+        try:
+            campos = await self._page.evaluate("""
+                () => {
+                    const o = document.querySelector("input[placeholder='Origem']");
+                    const d = document.querySelector("input[placeholder='Destino'], input[placeholder='Destino 1']");
+                    return {
+                        origem: o ? o.value : '?',
+                        destino: d ? d.value : '?'
+                    };
+                }
+            """)
+            logger.info(f"QualP: campos antes de CALCULAR → origem={campos['origem']!r}  destino={campos['destino']!r}")
+            await self._page.screenshot(path="outputs/debug_pre_calcular.png", full_page=False)
+        except Exception:
+            pass
+
         try:
             btn = self._page.locator(SEL_BTN_CALCULAR).first
             await btn.wait_for(state="attached", timeout=10000)
