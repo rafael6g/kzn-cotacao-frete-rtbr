@@ -102,6 +102,7 @@ class ProcessarLoteUseCase:
 
                 else:
                     # ── 3. Consulta o site ───────────────────────────
+                    _t0_consulta = time.monotonic()
                     try:
                         # ── 2. Abre sessão do browser uma única vez ──
                         if not sessao_aberta:
@@ -189,10 +190,12 @@ class ProcessarLoteUseCase:
                         })
 
                     finally:
-                        # Delay sempre aplicado após consulta ao site — sucesso OU erro.
-                        # Evita requisições seguidas rápidas que causam bloqueio no QualP.
+                        # Delay dinâmico: garante que o ciclo total (consulta + espera) ≈ delay_configurado.
+                        # Mínimo de 8s mesmo que a consulta tenha demorado mais que o delay.
                         if lote.delay_segundos > 0:
-                            await asyncio.sleep(lote.delay_segundos)
+                            elapsed = time.monotonic() - _t0_consulta
+                            espera = max(8.0, lote.delay_segundos - elapsed)
+                            await asyncio.sleep(espera)
 
                 lote.linhas_processadas = idx
 
