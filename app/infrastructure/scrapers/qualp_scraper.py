@@ -489,8 +489,11 @@ class QualPScraper(SiteScraper):
         if len(partes) == 2:
             cidade, uf = partes[0], partes[1].upper()
             estado = _ESTADOS.get(uf, uf)
-            return f"{cidade}, {estado}, Brasil"
-        return endereco  # já está no formato longo, usa como está
+            return f"{cidade.title()}, {estado}, Brasil"
+        # Normaliza casing: "TRES LAGOAS, MS, BRASIL" → "Tres Lagoas, Ms, Brasil"
+        # Necessário pois planilhas geralmente vêm em MAIÚSCULAS e o autocomplete do QualP
+        # não retorna sugestões para entradas em ALL CAPS.
+        return ", ".join(p.strip().title() for p in partes)
 
     async def _preencher_origem(self, endereco: str) -> None:
         """Clica no container Quasar da origem, digita e seleciona primeira sugestão."""
