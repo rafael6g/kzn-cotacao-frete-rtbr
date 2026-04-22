@@ -109,12 +109,10 @@ class ProcessarLoteUseCase:
                             await self._scraper.iniciar_sessao()
                             sessao_aberta = True
 
-                        # O delay é passado ao scraper para ser aplicado APÓS o buscar
-                        # e ANTES da extração: consulta → aguarda → salva → próxima
                         _t0 = time.monotonic()
                         resultado = await self._scraper.consultar(
                             cotacao.parametros,
-                            delay_segundos=lote.delay_segundos,
+                            delay_segundos=0,  # delay gerenciado aqui no finally
                         )
                         duracao_s = round(time.monotonic() - _t0, 1)
 
@@ -189,6 +187,12 @@ class ProcessarLoteUseCase:
                             "status": "erro",
                             "mensagem": f"[{tipo_exc}] {cotacao.parametros.origem} → {cotacao.parametros.destino}: {e}",
                         })
+
+                    finally:
+                        # Delay sempre aplicado após consulta ao site — sucesso OU erro.
+                        # Evita requisições seguidas rápidas que causam bloqueio no QualP.
+                        if lote.delay_segundos > 0:
+                            await asyncio.sleep(lote.delay_segundos)
 
                 lote.linhas_processadas = idx
 
