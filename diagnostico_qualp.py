@@ -8,7 +8,6 @@ import time
 from pathlib import Path
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeout
 
-# ── Configuração ──────────────────────────────────────────────────────
 import random
 import sys
 
@@ -20,35 +19,32 @@ CONSUMO       = 2.50
 PRECO         = 7.25
 TABELA_FRETE  = "B"   # "A" | "B" | "C" | "D"
 
-_CIDADES = [
-    "Londrina, Parana, Brasil",
-    "Curitiba, Parana, Brasil",
-    "Maringa, Parana, Brasil",
-    "Cascavel, Parana, Brasil",
-    "Ponta Grossa, Parana, Brasil",
+_ORIGEM_FIXA = "Tres Lagoas, Mato Grosso do Sul, Brasil"
+
+_DESTINOS = [
+    "Castanhal, Para, Brasil",
+    "Hortolandia, Sao Paulo, Brasil",
+    "Palhoca, Santa Catarina, Brasil",
+    "Santa Cruz do Rio Pardo, Sao Paulo, Brasil",
     "Sao Paulo, Sao Paulo, Brasil",
-    "Campinas, Sao Paulo, Brasil",
-    "Ribeirao Preto, Sao Paulo, Brasil",
-    "Santos, Sao Paulo, Brasil",
-    "Belo Horizonte, Minas Gerais, Brasil",
-    "Uberlandia, Minas Gerais, Brasil",
+    "Cachoeirinha, Rio Grande do Sul, Brasil",
     "Porto Alegre, Rio Grande do Sul, Brasil",
-    "Caxias do Sul, Rio Grande do Sul, Brasil",
-    "Florianopolis, Santa Catarina, Brasil",
-    "Joinville, Santa Catarina, Brasil",
-    "Goiania, Goias, Brasil",
-    "Brasilia, Distrito Federal, Brasil",
-    "Salvador, Bahia, Brasil",
-    "Recife, Pernambuco, Brasil",
-    "Fortaleza, Ceara, Brasil",
+    "Sapucaia do Sul, Rio Grande do Sul, Brasil",
+    "Sumare, Sao Paulo, Brasil",
+    "Teixeira de Freitas, Bahia, Brasil",
 ]
 
-# Uso: python diagnostico_qualp.py [Nletra]  ex: 5a  9b  2c
-# Origem e destino sempre aleatórios da lista acima
-_par = random.sample(_CIDADES, 2)
-ORIGEM, DESTINO = _par[0], _par[1]
+# Uso:
+#   python diagnostico_qualp.py                      → origem fixa, destino aleatório
+#   python diagnostico_qualp.py 9b                   → eixos=9, tabela=B
+#   python diagnostico_qualp.py "ORIGEM" "DESTINO"   → rota específica
+ORIGEM  = _ORIGEM_FIXA
+DESTINO = random.choice(_DESTINOS)
 
-if len(sys.argv) >= 2:
+if len(sys.argv) >= 3:
+    ORIGEM  = sys.argv[1]
+    DESTINO = sys.argv[2]
+elif len(sys.argv) >= 2:
     import re as _re
     _m = _re.match(r"(\d+)([abcdABCD])", sys.argv[1])
     if _m:

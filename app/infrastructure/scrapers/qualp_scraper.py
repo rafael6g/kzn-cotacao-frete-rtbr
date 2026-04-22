@@ -562,9 +562,9 @@ class QualPScraper(SiteScraper):
           3. Primeira sugestão disponível
         """
         try:
-            # Aguarda o painel aparecer
+            # Aguarda o painel aparecer — Docker/VPS pode demorar mais que local
             painel = self._page.locator(".waypoints-location-drawer")
-            await painel.wait_for(state="visible", timeout=5000)
+            await painel.wait_for(state="visible", timeout=15000)
             await self._page.wait_for_timeout(_j(500))
 
             sugestoes = self._page.locator(SEL_SUGESTAO)
