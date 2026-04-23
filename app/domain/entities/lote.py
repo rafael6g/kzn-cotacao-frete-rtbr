@@ -19,6 +19,7 @@ class LoteCotacao:
     total_linhas: int
     delay_segundos: int
     arquivo_entrada: str
+    empresa_id: int = 0
     id: Optional[int] = None
     status: StatusLote = StatusLote.AGUARDANDO
     linhas_processadas: int = 0
