@@ -42,7 +42,6 @@
           <span id="fila-ativo-nome" class="font-semibold text-white"></span>
           — Rota <span id="fila-ativo-linha">0</span> de <span id="fila-ativo-total">0</span>
         </p>
-        <p class="text-amber-100 text-xs font-mono mt-1" id="fila-ativo-rota"></p>
       </div>
       <p class="text-gray-500 text-xs mt-2 italic">Sua vez começa em breve.</p>
     </div>
@@ -113,7 +112,6 @@
   const filaAtivoNome  = document.getElementById("fila-ativo-nome");
   const filaAtivoLinha = document.getElementById("fila-ativo-linha");
   const filaAtivoTotal = document.getElementById("fila-ativo-total");
-  const filaAtivoRota  = document.getElementById("fila-ativo-rota");
 
   function adicionarLog(msg, cor = "text-gray-300") {
     const linha = document.createElement("div");
@@ -152,8 +150,6 @@
           filaAtivoNome.textContent = evento.ativo_nome;
           filaAtivoLinha.textContent = evento.ativo_linha || 0;
           filaAtivoTotal.textContent = evento.ativo_total || 0;
-          filaAtivoRota.textContent = (evento.ativo_origem && evento.ativo_destino)
-            ? `${evento.ativo_origem} → ${evento.ativo_destino}` : "";
           filaAtivoInfo.classList.remove("hidden");
         }
         break;
