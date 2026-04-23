@@ -76,17 +76,63 @@ def _remover_fila(lote_id: int) -> None:
     _filas_progresso.pop(lote_id, None)
 
 
-# ── Fila global de processamento (1 scraper ativo por vez) ───────────
-# threading.Lock garante serialização entre threads independente do asyncio event loop.
-# Cada BackgroundTask do Starlette pode rodar em contexto asyncio diferente,
-# tornando asyncio.Lock ineficaz entre requisições distintas.
-_processamento_lock = threading.Lock()
+# ── Pool de slots QualP + fila global ────────────────────────────────
+# Cada slot representa uma conta QualP com session própria.
+# threading.Semaphore(N) permite N processamentos simultâneos.
+# threading.Lock separado protege a atribuição de slots entre threads.
+_slots: list[dict] = []
+_slots_lock = threading.Lock()
+_semaforo: Optional[threading.Semaphore] = None
 _fila_global: list[dict] = []   # [{lote_id, nome, total}]
-_lote_ativo: dict = {}          # {nome, linha, total, origem, destino}
+
+
+def _inicializar_slots() -> None:
+    """Monta o pool de slots a partir das credenciais configuradas."""
+    global _slots, _semaforo
+    _slots = []
+    if settings.qualp_usuario_padrao:
+        _slots.append({
+            "id": 0, "em_uso": False, "lote_ativo": {},
+            "usuario": settings.qualp_usuario_padrao,
+            "senha": settings.qualp_senha_padrao,
+            "session_file": ".qualp_session_padrao.json",
+        })
+    if settings.qualp_usuario:
+        _slots.append({
+            "id": len(_slots), "em_uso": False, "lote_ativo": {},
+            "usuario": settings.qualp_usuario,
+            "senha": settings.qualp_senha,
+            "session_file": ".qualp_session.json",
+        })
+    if not _slots:
+        _slots.append({
+            "id": 0, "em_uso": False, "lote_ativo": {},
+            "usuario": "", "senha": "", "session_file": "",
+        })
+    _semaforo = threading.Semaphore(len(_slots))
+
+
+_inicializar_slots()
+
+
+def _pegar_slot() -> dict:
+    with _slots_lock:
+        for s in _slots:
+            if not s["em_uso"]:
+                s["em_uso"] = True
+                return s
+    return _slots[0]  # Não deve ocorrer: semáforo garante slot disponível
+
+
+def _liberar_slot(slot: dict) -> None:
+    with _slots_lock:
+        slot["em_uso"] = False
+        slot["lote_ativo"] = {}
 
 
 def _broadcast_fila() -> None:
     """Envia fila_aguardando atualizado para todos os lotes na espera."""
+    slots_ativos = [s["lote_ativo"] for s in _slots if s["em_uso"] and s["lote_ativo"]]
     for i, item in enumerate(_fila_global):
         q = _filas_progresso.get(item["lote_id"])
         if q:
@@ -95,11 +141,7 @@ def _broadcast_fila() -> None:
                     "tipo": "fila_aguardando",
                     "posicao": i + 1,
                     "total_fila": len(_fila_global),
-                    "ativo_nome": _lote_ativo.get("nome", ""),
-                    "ativo_linha": _lote_ativo.get("linha", 0),
-                    "ativo_total": _lote_ativo.get("total", 0),
-                    "ativo_origem": _lote_ativo.get("origem", ""),
-                    "ativo_destino": _lote_ativo.get("destino", ""),
+                    "slots_ativos": slots_ativos,
                 })
             except asyncio.QueueFull:
                 pass
@@ -319,21 +361,22 @@ async def _executar_processamento(
     _fila_global.append(entrada)
     _broadcast_fila()
 
-    def _rodar_com_lock() -> None:
+    def _rodar_no_slot() -> None:
         """
-        Executa na thread pool. threading.Lock serializa execuções entre threads,
-        garantindo 1 scraper ativo por vez independente do asyncio event loop.
+        Executa na thread pool. Semáforo permite N slots simultâneos (1 por conta QualP).
+        Cada slot tem credenciais e session_file próprios.
         """
-        with _processamento_lock:
-            # Saiu da fila — agora é o lote ativo
+        _semaforo.acquire()
+        slot = _pegar_slot()
+        try:
+            # Saiu da fila — ocupa o slot
             try:
                 _fila_global.remove(entrada)
             except ValueError:
                 pass
-            _lote_ativo.update({
+            slot["lote_ativo"] = {
                 "nome": lote.nome, "linha": 0, "total": len(cotacoes),
-                "origem": "", "destino": "",
-            })
+            }
 
             def _notify_iniciando():
                 try:
@@ -356,18 +399,25 @@ async def _executar_processamento(
                             "nome": lote.nome,
                             "linha": evento.get("linha", 0),
                             "total": evento.get("total", 0),
-                            "origem": evento.get("origem", ""),
-                            "destino": evento.get("destino", ""),
                         }
-                        def _atualizar(_u=_upd):
-                            _lote_ativo.update(_u)
+                        def _atualizar(_u=_upd, _s=slot):
+                            _s["lote_ativo"].update(_u)
                             _broadcast_fila()
                         main_loop.call_soon_threadsafe(_atualizar)
 
                 async def on_progresso(evento: dict) -> None:
                     _enfileirar(evento)
 
-                scraper = _criar_scraper(site_url_base, headless)
+                # QualP usa credenciais do slot; outros scrapers usam _criar_scraper normal
+                if "qualp.com.br" in site_url_base and slot["usuario"]:
+                    scraper = QualPScraper(
+                        usuario=slot["usuario"],
+                        senha=slot["senha"],
+                        headless=headless,
+                        session_file=slot["session_file"],
+                    )
+                else:
+                    scraper = _criar_scraper(site_url_base, headless)
                 use_case = ProcessarLoteUseCase(repo, scraper)
 
                 try:
@@ -430,11 +480,12 @@ async def _executar_processamento(
 
             asyncio.run(_async_main())  # Cria ProactorEventLoop no Windows
 
-            # Limpa lote ativo e notifica quem ainda aguarda
-            _lote_ativo.clear()
+        finally:
+            _liberar_slot(slot)
+            _semaforo.release()
             main_loop.call_soon_threadsafe(_broadcast_fila)
 
-    await asyncio.get_running_loop().run_in_executor(None, _rodar_com_lock)
+    await asyncio.get_running_loop().run_in_executor(None, _rodar_no_slot)
 
 
 # ── SSE — Progresso em tempo real ────────────────────────────────────

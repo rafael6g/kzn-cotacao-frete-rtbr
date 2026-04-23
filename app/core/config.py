@@ -34,12 +34,12 @@ class Settings(BaseSettings):
     playwright_resultado_timeout_ms: int = 90000
     playwright_slow_mo_ms: int = 0
 
-    # Auth Kryzon (opcional — sem isso roda em modo dev sem autenticação)
-    kzn_auth_url: str = ""
-
-    # QualP
+    # QualP — conta compartilhada
     qualp_usuario: str = ""
     qualp_senha: str = ""
+    # QualP — conta exclusiva do sistema (slot estável, session separada)
+    qualp_usuario_padrao: str = ""
+    qualp_senha_padrao: str = ""
 
     # Processamento
     delay_padrao_segundos: int = 10

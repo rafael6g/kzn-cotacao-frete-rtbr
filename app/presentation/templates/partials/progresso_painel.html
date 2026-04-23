@@ -36,12 +36,9 @@
     <div id="painel-fila" class="hidden my-3 rounded border border-amber-800/40 bg-amber-950/20 px-4 py-3 text-sm">
       <p class="text-amber-400 font-semibold">⏳ Aguardando na fila...</p>
       <p class="text-amber-200 mt-1">Você é o <span id="fila-posicao" class="font-bold">?</span>º da fila</p>
-      <div id="fila-ativo-info" class="mt-3 border-t border-amber-800/30 pt-2 hidden">
+      <div id="fila-slots-lista" class="mt-3 border-t border-amber-800/30 pt-2 hidden">
         <p class="text-gray-400 text-xs font-semibold">🔍 Processando agora:</p>
-        <p class="text-gray-300 text-xs mt-1">
-          <span id="fila-ativo-nome" class="font-semibold text-white"></span>
-          — Rota <span id="fila-ativo-linha">0</span> de <span id="fila-ativo-total">0</span>
-        </p>
+        <ul id="fila-slots-ul" class="mt-1 space-y-0.5 text-xs text-gray-300"></ul>
       </div>
       <p class="text-gray-500 text-xs mt-2 italic">Sua vez começa em breve.</p>
     </div>
@@ -108,10 +105,8 @@
   const consultaTexto  = document.getElementById("consulta-atual-texto");
   const painelFila     = document.getElementById("painel-fila");
   const filaPosicao    = document.getElementById("fila-posicao");
-  const filaAtivoInfo  = document.getElementById("fila-ativo-info");
-  const filaAtivoNome  = document.getElementById("fila-ativo-nome");
-  const filaAtivoLinha = document.getElementById("fila-ativo-linha");
-  const filaAtivoTotal = document.getElementById("fila-ativo-total");
+  const filaSlotsList  = document.getElementById("fila-slots-lista");
+  const filaSlotsUl    = document.getElementById("fila-slots-ul");
 
   function adicionarLog(msg, cor = "text-gray-300") {
     const linha = document.createElement("div");
@@ -146,12 +141,15 @@
       case "fila_aguardando":
         painelFila.classList.remove("hidden");
         filaPosicao.textContent = evento.posicao;
-        if (evento.ativo_nome) {
-          filaAtivoNome.textContent = evento.ativo_nome;
-          filaAtivoLinha.textContent = evento.ativo_linha || 0;
-          filaAtivoTotal.textContent = evento.ativo_total || 0;
-          filaAtivoInfo.classList.remove("hidden");
-        }
+        filaSlotsUl.innerHTML = "";
+        (evento.slots_ativos || []).forEach(function(s) {
+          if (s.nome) {
+            const li = document.createElement("li");
+            li.textContent = "• " + s.nome + " — Rota " + (s.linha || 0) + " de " + (s.total || 0);
+            filaSlotsUl.appendChild(li);
+          }
+        });
+        filaSlotsList.classList.toggle("hidden", !(evento.slots_ativos && evento.slots_ativos.length));
         break;
 
       case "fila_iniciando":
