@@ -9,6 +9,7 @@ Rotas principais:
 
 import asyncio
 import json
+import threading
 from pathlib import Path
 from typing import Optional
 
@@ -76,16 +77,12 @@ def _remover_fila(lote_id: int) -> None:
 
 
 # ── Fila global de processamento (1 scraper ativo por vez) ───────────
-_processamento_lock: Optional[asyncio.Lock] = None
+# threading.Lock garante serialização entre threads independente do asyncio event loop.
+# Cada BackgroundTask do Starlette pode rodar em contexto asyncio diferente,
+# tornando asyncio.Lock ineficaz entre requisições distintas.
+_processamento_lock = threading.Lock()
 _fila_global: list[dict] = []   # [{lote_id, nome, total}]
 _lote_ativo: dict = {}          # {nome, linha, total, origem, destino}
-
-
-def _get_lock() -> asyncio.Lock:
-    global _processamento_lock
-    if _processamento_lock is None:
-        _processamento_lock = asyncio.Lock()
-    return _processamento_lock
 
 
 def _broadcast_fila() -> None:
@@ -322,24 +319,29 @@ async def _executar_processamento(
     _fila_global.append(entrada)
     _broadcast_fila()
 
-    async with _get_lock():
-        # Saiu da fila — agora é o lote ativo
-        try:
-            _fila_global.remove(entrada)
-        except ValueError:
-            pass
-        _lote_ativo.update({
-            "nome": lote.nome, "linha": 0, "total": len(cotacoes),
-            "origem": "", "destino": "",
-        })
-        try:
-            fila.put_nowait({"tipo": "fila_iniciando"})
-        except asyncio.QueueFull:
-            pass
-        _broadcast_fila()  # Atualiza posições dos que ainda aguardam
+    def _rodar_com_lock() -> None:
+        """
+        Executa na thread pool. threading.Lock serializa execuções entre threads,
+        garantindo 1 scraper ativo por vez independente do asyncio event loop.
+        """
+        with _processamento_lock:
+            # Saiu da fila — agora é o lote ativo
+            try:
+                _fila_global.remove(entrada)
+            except ValueError:
+                pass
+            _lote_ativo.update({
+                "nome": lote.nome, "linha": 0, "total": len(cotacoes),
+                "origem": "", "destino": "",
+            })
 
-        def _rodar_em_thread() -> None:
-            """Executa dentro de uma thread com ProactorEventLoop próprio."""
+            def _notify_iniciando():
+                try:
+                    fila.put_nowait({"tipo": "fila_iniciando"})
+                except asyncio.QueueFull:
+                    pass
+                _broadcast_fila()
+            main_loop.call_soon_threadsafe(_notify_iniciando)
 
             async def _async_main() -> None:
                 # Cria repositório próprio para este loop (httpx.AsyncClient não é compartilhável)
@@ -428,10 +430,11 @@ async def _executar_processamento(
 
             asyncio.run(_async_main())  # Cria ProactorEventLoop no Windows
 
-        await asyncio.get_running_loop().run_in_executor(None, _rodar_em_thread)
-        # Limpa lote ativo e notifica quem ainda aguarda
-        _lote_ativo.clear()
-        _broadcast_fila()
+            # Limpa lote ativo e notifica quem ainda aguarda
+            _lote_ativo.clear()
+            main_loop.call_soon_threadsafe(_broadcast_fila)
+
+    await asyncio.get_running_loop().run_in_executor(None, _rodar_com_lock)
 
 
 # ── SSE — Progresso em tempo real ────────────────────────────────────
