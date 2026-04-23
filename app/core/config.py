@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     playwright_resultado_timeout_ms: int = 90000  # espera pelo resultado da rota (rotas longas podem demorar 60s+)
     playwright_slow_mo_ms: int = 0
 
+    # Auth Kryzon (opcional — sem isso roda em modo dev sem autenticação)
+    kzn_auth_url: str = ""
+
     # QualP
     qualp_usuario: str = ""
     qualp_senha: str = ""
