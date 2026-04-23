@@ -8,7 +8,9 @@ Mesmo fluxo do diagnostico_qualp.py mas:
   - Credenciais via .env (settings)
 
 Uso no bash do EasyPanel:
-    python diagnostico_qualp_headless.py
+    python diagnostico_qualp_headless.py           # eixos=3 (padrão)
+    python diagnostico_qualp_headless.py 5         # eixos=5
+    python diagnostico_qualp_headless.py 9         # eixos=9
 """
 
 import asyncio
@@ -26,9 +28,9 @@ settings = get_settings()
 USUARIO = settings.qualp_usuario
 SENHA   = settings.qualp_senha
 
-# Parâmetros fixos — mesmos da tela de cotação (eixos=3, caminhão, R$7,25, 2,50 km/l)
+# Parâmetros — eixos pode ser passado como argumento: python diagnostico_qualp_headless.py 5
 VEICULO      = 2        # caminhão
-EIXOS        = 3
+EIXOS        = int(sys.argv[1]) if len(sys.argv) > 1 else 3
 CONSUMO      = 2.50
 PRECO        = 7.25
 TABELA_FRETE = "A"
