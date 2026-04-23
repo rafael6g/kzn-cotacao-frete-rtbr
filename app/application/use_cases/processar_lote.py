@@ -110,6 +110,14 @@ class ProcessarLoteUseCase:
                             await self._scraper.iniciar_sessao()
                             sessao_aberta = True
 
+                        await self._emitir(on_progresso, {
+                            "tipo": "consultando",
+                            "linha": idx,
+                            "total": lote.total_linhas,
+                            "origem": cotacao.parametros.origem,
+                            "destino": cotacao.parametros.destino,
+                        })
+
                         _t0 = time.monotonic()
                         resultado = await self._scraper.consultar(
                             cotacao.parametros,

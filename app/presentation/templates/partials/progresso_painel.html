@@ -32,6 +32,12 @@
       </div>
     </div>
 
+    <!-- Consulta atual -->
+    <div id="consulta-atual" class="hidden my-2 rounded border border-yellow-800/40 bg-yellow-950/30 px-3 py-2 text-sm">
+      <span class="text-yellow-500 font-semibold">🔍 Consultando agora:</span>
+      <span id="consulta-atual-texto" class="ml-2 font-mono text-yellow-200"></span>
+    </div>
+
     <!-- Log em tempo real -->
     <div class="border rounded bg-gray-950 text-gray-300 p-3 h-64 overflow-y-auto log-box" id="log-container">
       <div class="text-gray-500 italic">Aguardando início...</div>
@@ -80,10 +86,12 @@
   const ctCache = document.getElementById("ct-cache");
   const ctSite  = document.getElementById("ct-site");
   const ctErro  = document.getElementById("ct-erro");
-  const areaDownload = document.getElementById("area-download");
-  const btnDownload  = document.getElementById("btn-download");
-  const areaErro    = document.getElementById("area-erro");
-  const detalheErro  = document.getElementById("detalhe-erro");
+  const areaDownload   = document.getElementById("area-download");
+  const btnDownload    = document.getElementById("btn-download");
+  const areaErro       = document.getElementById("area-erro");
+  const detalheErro    = document.getElementById("detalhe-erro");
+  const consultaAtual  = document.getElementById("consulta-atual");
+  const consultaTexto  = document.getElementById("consulta-atual-texto");
 
   function adicionarLog(msg, cor = "text-gray-300") {
     const linha = document.createElement("div");
@@ -119,7 +127,16 @@
         adicionarLog(`🚀 ${evento.mensagem}`, "text-yellow-300");
         break;
 
+      case "consultando":
+        consultaTexto.textContent = `${evento.origem} → ${evento.destino}`;
+        consultaAtual.classList.remove("hidden");
+        texto.textContent = `Consultando ${evento.linha} de ${total}...`;
+        break;
+
       case "item":
+        // Oculta "consultando agora" quando o item termina
+        consultaAtual.classList.add("hidden");
+
         processadas = evento.linha;
         if (evento.fonte === "cache") cache++;
         else if (evento.status === "ok") site++;
@@ -148,6 +165,7 @@
         break;
 
       case "fim":
+        consultaAtual.classList.add("hidden");
         adicionarLog(
           `🏁 ${evento.mensagem}`,
           evento.status === "concluido" ? "text-white font-bold" : "text-red-300 font-bold"
