@@ -75,6 +75,39 @@ def _remover_fila(lote_id: int) -> None:
     _filas_progresso.pop(lote_id, None)
 
 
+# ── Fila global de processamento (1 scraper ativo por vez) ───────────
+_processamento_lock: Optional[asyncio.Lock] = None
+_fila_global: list[dict] = []   # [{lote_id, nome, total}]
+_lote_ativo: dict = {}          # {nome, linha, total, origem, destino}
+
+
+def _get_lock() -> asyncio.Lock:
+    global _processamento_lock
+    if _processamento_lock is None:
+        _processamento_lock = asyncio.Lock()
+    return _processamento_lock
+
+
+def _broadcast_fila() -> None:
+    """Envia fila_aguardando atualizado para todos os lotes na espera."""
+    for i, item in enumerate(_fila_global):
+        q = _filas_progresso.get(item["lote_id"])
+        if q:
+            try:
+                q.put_nowait({
+                    "tipo": "fila_aguardando",
+                    "posicao": i + 1,
+                    "total_fila": len(_fila_global),
+                    "ativo_nome": _lote_ativo.get("nome", ""),
+                    "ativo_linha": _lote_ativo.get("linha", 0),
+                    "ativo_total": _lote_ativo.get("total", 0),
+                    "ativo_origem": _lote_ativo.get("origem", ""),
+                    "ativo_destino": _lote_ativo.get("destino", ""),
+                })
+            except asyncio.QueueFull:
+                pass
+
+
 # ── Download do modelo de exemplo ────────────────────────────────────
 
 _CIDADES_BRASIL = [
@@ -284,85 +317,121 @@ async def _executar_processamento(
     fila = _obter_fila(lote.id)
     main_loop = asyncio.get_running_loop()
 
-    def _rodar_em_thread() -> None:
-        """Executa dentro de uma thread com ProactorEventLoop próprio."""
+    # Entra na fila global e avisa os que já aguardam
+    entrada = {"lote_id": lote.id, "nome": lote.nome, "total": len(cotacoes)}
+    _fila_global.append(entrada)
+    _broadcast_fila()
 
-        async def _async_main() -> None:
-            # Cria repositório próprio para este loop (httpx.AsyncClient não é compartilhável)
-            repo = XanoRepository(settings)
-            excel_svc = get_excel_service()
+    async with _get_lock():
+        # Saiu da fila — agora é o lote ativo
+        try:
+            _fila_global.remove(entrada)
+        except ValueError:
+            pass
+        _lote_ativo.update({
+            "nome": lote.nome, "linha": 0, "total": len(cotacoes),
+            "origem": "", "destino": "",
+        })
+        try:
+            fila.put_nowait({"tipo": "fila_iniciando"})
+        except asyncio.QueueFull:
+            pass
+        _broadcast_fila()  # Atualiza posições dos que ainda aguardam
 
-            def _enfileirar(evento: dict) -> None:
-                """Envia evento para a fila do loop principal de forma thread-safe."""
-                asyncio.run_coroutine_threadsafe(fila.put(evento), main_loop)
+        def _rodar_em_thread() -> None:
+            """Executa dentro de uma thread com ProactorEventLoop próprio."""
 
-            async def on_progresso(evento: dict) -> None:
-                _enfileirar(evento)
+            async def _async_main() -> None:
+                # Cria repositório próprio para este loop (httpx.AsyncClient não é compartilhável)
+                repo = XanoRepository(settings)
+                excel_svc = get_excel_service()
 
-            scraper = _criar_scraper(site_url_base, headless)
-            use_case = ProcessarLoteUseCase(repo, scraper)
+                def _enfileirar(evento: dict) -> None:
+                    """Envia evento para a fila do loop principal de forma thread-safe."""
+                    asyncio.run_coroutine_threadsafe(fila.put(evento), main_loop)
+                    if evento.get("tipo") == "consultando":
+                        _upd = {
+                            "nome": lote.nome,
+                            "linha": evento.get("linha", 0),
+                            "total": evento.get("total", 0),
+                            "origem": evento.get("origem", ""),
+                            "destino": evento.get("destino", ""),
+                        }
+                        def _atualizar(_u=_upd):
+                            _lote_ativo.update(_u)
+                            _broadcast_fila()
+                        main_loop.call_soon_threadsafe(_atualizar)
 
-            try:
-                lote_result = await use_case.executar(
-                    lote=lote,
-                    cotacoes=cotacoes,
-                    config_id=config_id,
-                    validade_cache_horas=validade_cache_horas,
-                    on_progresso=on_progresso,
-                )
+                async def on_progresso(evento: dict) -> None:
+                    _enfileirar(evento)
 
-                gerar_excel = GerarExcelUseCase(excel_svc)
-                if "qualp.com.br" in site_url_base:
-                    _site_id = "qualp"
-                elif "antt.gov.br" in site_url_base:
-                    _site_id = "antt"
-                else:
-                    _site_id = "rotasbrasil"
-                arquivo_saida = await gerar_excel.executar(
-                    lote_result, cotacoes, arquivo_path,
-                    validade_cache_horas=validade_cache_horas,
-                    site_id=_site_id,
-                )
-                lote_result.arquivo_saida = Path(arquivo_saida).name
-                await repo.atualizar_lote(lote_result)
+                scraper = _criar_scraper(site_url_base, headless)
+                use_case = ProcessarLoteUseCase(repo, scraper)
 
-                # Salva snapshot no Xano para download futuro (após redeploy)
-                dados_historico = [
-                    {
-                        "linha_numero": c.linha_numero,
-                        "parametros": c.parametros.to_dict(),
-                        "resultado": c.resultado.to_dict() if c.resultado else None,
-                        "status": c.status.value,
-                        "fonte": c.fonte.value if c.fonte else None,
-                        "erro_mensagem": c.erro_mensagem,
-                    }
-                    for c in cotacoes
-                ]
-                await repo.salvar_historico(lote_result.id, lote_result.nome, dados_historico)
-
-                # Remove upload após processamento concluído
                 try:
-                    Path(arquivo_path).unlink(missing_ok=True)
-                except Exception:
-                    pass
+                    lote_result = await use_case.executar(
+                        lote=lote,
+                        cotacoes=cotacoes,
+                        config_id=config_id,
+                        validade_cache_horas=validade_cache_horas,
+                        on_progresso=on_progresso,
+                    )
 
-                _enfileirar({
-                    "tipo": "download_pronto",
-                    "lote_id": lote_result.id,
-                    "arquivo": lote_result.arquivo_saida,
-                    "mensagem": "Arquivo Excel pronto para download!",
-                })
+                    gerar_excel = GerarExcelUseCase(excel_svc)
+                    if "qualp.com.br" in site_url_base:
+                        _site_id = "qualp"
+                    elif "antt.gov.br" in site_url_base:
+                        _site_id = "antt"
+                    else:
+                        _site_id = "rotasbrasil"
+                    arquivo_saida = await gerar_excel.executar(
+                        lote_result, cotacoes, arquivo_path,
+                        validade_cache_horas=validade_cache_horas,
+                        site_id=_site_id,
+                    )
+                    lote_result.arquivo_saida = Path(arquivo_saida).name
+                    await repo.atualizar_lote(lote_result)
 
-            except Exception as e:
-                logger.exception(f"Erro no background task do lote {lote.id}: {e}")
-                _enfileirar({"tipo": "erro_critico", "mensagem": str(e)})
-            finally:
-                # Agenda remoção da fila no loop principal após 30s
-                main_loop.call_later(30, lambda: _remover_fila(lote.id))
+                    # Salva snapshot no Xano para download futuro (após redeploy)
+                    dados_historico = [
+                        {
+                            "linha_numero": c.linha_numero,
+                            "parametros": c.parametros.to_dict(),
+                            "resultado": c.resultado.to_dict() if c.resultado else None,
+                            "status": c.status.value,
+                            "fonte": c.fonte.value if c.fonte else None,
+                            "erro_mensagem": c.erro_mensagem,
+                        }
+                        for c in cotacoes
+                    ]
+                    await repo.salvar_historico(lote_result.id, lote_result.nome, dados_historico)
 
-        asyncio.run(_async_main())  # Cria ProactorEventLoop no Windows
+                    # Remove upload após processamento concluído
+                    try:
+                        Path(arquivo_path).unlink(missing_ok=True)
+                    except Exception:
+                        pass
 
-    await asyncio.get_running_loop().run_in_executor(None, _rodar_em_thread)
+                    _enfileirar({
+                        "tipo": "download_pronto",
+                        "lote_id": lote_result.id,
+                        "arquivo": lote_result.arquivo_saida,
+                        "mensagem": "Arquivo Excel pronto para download!",
+                    })
+
+                except Exception as e:
+                    logger.exception(f"Erro no background task do lote {lote.id}: {e}")
+                    _enfileirar({"tipo": "erro_critico", "mensagem": str(e)})
+                finally:
+                    # Agenda remoção da fila no loop principal após 30s
+                    main_loop.call_later(30, lambda: _remover_fila(lote.id))
+
+            asyncio.run(_async_main())  # Cria ProactorEventLoop no Windows
+
+        await asyncio.get_running_loop().run_in_executor(None, _rodar_em_thread)
+        # Limpa lote ativo e notifica quem ainda aguarda
+        _lote_ativo.clear()
+        _broadcast_fila()
 
 
 # ── SSE — Progresso em tempo real ────────────────────────────────────

@@ -32,6 +32,21 @@
       </div>
     </div>
 
+    <!-- Painel de fila (oculto; aparece quando fila_aguardando recebido) -->
+    <div id="painel-fila" class="hidden my-3 rounded border border-amber-800/40 bg-amber-950/20 px-4 py-3 text-sm">
+      <p class="text-amber-400 font-semibold">⏳ Aguardando na fila...</p>
+      <p class="text-amber-200 mt-1">Você é o <span id="fila-posicao" class="font-bold">?</span>º da fila</p>
+      <div id="fila-ativo-info" class="mt-3 border-t border-amber-800/30 pt-2 hidden">
+        <p class="text-gray-400 text-xs font-semibold">🔍 Processando agora:</p>
+        <p class="text-gray-300 text-xs mt-1">
+          <span id="fila-ativo-nome" class="font-semibold text-white"></span>
+          — Rota <span id="fila-ativo-linha">0</span> de <span id="fila-ativo-total">0</span>
+        </p>
+        <p class="text-amber-100 text-xs font-mono mt-1" id="fila-ativo-rota"></p>
+      </div>
+      <p class="text-gray-500 text-xs mt-2 italic">Sua vez começa em breve.</p>
+    </div>
+
     <!-- Consulta atual -->
     <div id="consulta-atual" class="hidden my-2 rounded border border-yellow-800/40 bg-yellow-950/30 px-3 py-2 text-sm">
       <span class="text-yellow-500 font-semibold">🔍 Consultando agora:</span>
@@ -92,6 +107,13 @@
   const detalheErro    = document.getElementById("detalhe-erro");
   const consultaAtual  = document.getElementById("consulta-atual");
   const consultaTexto  = document.getElementById("consulta-atual-texto");
+  const painelFila     = document.getElementById("painel-fila");
+  const filaPosicao    = document.getElementById("fila-posicao");
+  const filaAtivoInfo  = document.getElementById("fila-ativo-info");
+  const filaAtivoNome  = document.getElementById("fila-ativo-nome");
+  const filaAtivoLinha = document.getElementById("fila-ativo-linha");
+  const filaAtivoTotal = document.getElementById("fila-ativo-total");
+  const filaAtivoRota  = document.getElementById("fila-ativo-rota");
 
   function adicionarLog(msg, cor = "text-gray-300") {
     const linha = document.createElement("div");
@@ -121,6 +143,24 @@
     switch (evento.tipo) {
       case "conectado":
         adicionarLog("✅ Conectado ao servidor. Aguardando início...", "text-gray-400");
+        break;
+
+      case "fila_aguardando":
+        painelFila.classList.remove("hidden");
+        filaPosicao.textContent = evento.posicao;
+        if (evento.ativo_nome) {
+          filaAtivoNome.textContent = evento.ativo_nome;
+          filaAtivoLinha.textContent = evento.ativo_linha || 0;
+          filaAtivoTotal.textContent = evento.ativo_total || 0;
+          filaAtivoRota.textContent = (evento.ativo_origem && evento.ativo_destino)
+            ? `${evento.ativo_origem} → ${evento.ativo_destino}` : "";
+          filaAtivoInfo.classList.remove("hidden");
+        }
+        break;
+
+      case "fila_iniciando":
+        painelFila.classList.add("hidden");
+        filaAtivoInfo.classList.add("hidden");
         break;
 
       case "inicio":
