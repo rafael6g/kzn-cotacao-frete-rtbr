@@ -527,7 +527,7 @@ class QualPScraper(SiteScraper):
                     inp.dispatchEvent(new KeyboardEvent('keyup', {key: 's', bubbles: true}));
                 }
             """)
-            await self._page.wait_for_timeout(_j(300))
+            await self._page.wait_for_timeout(_j(2000))
             cidade = termo.split(",")[0].strip()
             await self._selecionar_primeira_sugestao("origem", cidade)
             self._form["origem"] = endereco
@@ -567,7 +567,7 @@ class QualPScraper(SiteScraper):
                     inp.dispatchEvent(new KeyboardEvent('keyup', {key: 's', bubbles: true}));
                 }
             """)
-            await self._page.wait_for_timeout(_j(300))
+            await self._page.wait_for_timeout(_j(2000))
             cidade = termo.split(",")[0].strip()
             await self._selecionar_primeira_sugestao("destino", cidade)
             self._form["destino"] = endereco
