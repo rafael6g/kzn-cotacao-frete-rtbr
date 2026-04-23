@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     # Playwright
     playwright_headless: bool = True
     playwright_timeout_ms: int = 30000
-    playwright_resultado_timeout_ms: int = 90000  # espera pelo resultado da rota (rotas longas podem demorar 60s+)
+    playwright_resultado_timeout_ms: int = 90000
     playwright_slow_mo_ms: int = 0
 
     # Auth Kryzon (opcional — sem isso roda em modo dev sem autenticação)
@@ -43,10 +43,22 @@ class Settings(BaseSettings):
 
     # Processamento
     delay_padrao_segundos: int = 10
-    min_ciclo_segundos: float = 5.0  # pausa mínima entre consultas; rotas longas já têm espaçamento natural
+    min_ciclo_segundos: float = 5.0
     max_retentativas: int = 2
     uploads_dir: str = "uploads"
     outputs_dir: str = "outputs"
+
+    # Kryzon Auth — integração SSO
+    kzn_auth_url: str = ""
+    portal_url: str = "https://auth.kryzon.com"
+
+    # Módulo — metadados para kzn-manifest.json
+    modulo_codigo: str = "cotacao-frete"
+    modulo_nome: str = "Cotação de Frete"
+    modulo_menu_nome: str = "Cotação de Frete"
+    modulo_url_base: str = ""
+    modulo_url_api: str = ""
+    modulo_versao: str = "1.0.0"
 
     @property
     def xano_url(self) -> str:
