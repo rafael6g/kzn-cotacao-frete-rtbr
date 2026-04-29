@@ -650,10 +650,21 @@ class QualPScraper(SiteScraper):
                 logger.error(f"QualP: CALCULAR não encontrado. URL={url_atual}")
             raise SiteIndisponivelError("QualP: botão CALCULAR não encontrado.")
 
-        # Aguarda o container da tabela de resultado aparecer
+        # Captura fingerprint do resultado anterior (distância) para detectar quando
+        # o novo resultado carregar — evita extrair dado stale se a tabela já estava visível.
+        fingerprint_anterior = ""
+        try:
+            tabela_atual = self._page.locator(SEL_RESULT_TABLE).first
+            if await tabela_atual.is_visible(timeout=500):
+                fingerprint_anterior = await tabela_atual.inner_text(timeout=1000)
+        except Exception:
+            pass
+
+        # Aguarda o container da tabela de resultado aparecer (ou mudar de conteúdo)
+        timeout_ms = settings.playwright_resultado_timeout_ms
         try:
             await self._page.locator(SEL_RESULT_TABLE).first.wait_for(
-                state="visible", timeout=settings.playwright_resultado_timeout_ms
+                state="visible", timeout=timeout_ms
             )
         except PlaywrightTimeout:
             try:
@@ -662,6 +673,24 @@ class QualPScraper(SiteScraper):
             except Exception:
                 pass
             raise TimeoutConsultaError("QualP: timeout aguardando resultado da rota.")
+
+        # Se havia resultado anterior, aguarda o conteúdo mudar (novo cálculo concluído).
+        # Evita ler dado stale quando wait_for(visible) retorna imediatamente.
+        if fingerprint_anterior:
+            import time as _time
+            deadline = _time.monotonic() + timeout_ms / 1000
+            while _time.monotonic() < deadline:
+                try:
+                    texto_atual = await self._page.locator(SEL_RESULT_TABLE).first.inner_text(timeout=1000)
+                    if texto_atual != fingerprint_anterior:
+                        break
+                except Exception:
+                    break
+                await self._page.wait_for_timeout(300)
+            else:
+                raise TimeoutConsultaError(
+                    f"QualP: resultado não mudou após {timeout_ms // 1000}s — possível dado stale."
+                )
 
         if delay_segundos > 0:
             await self._page.wait_for_timeout(delay_segundos * 1000)
