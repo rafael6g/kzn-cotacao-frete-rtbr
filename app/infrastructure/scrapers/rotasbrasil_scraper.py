@@ -306,14 +306,20 @@ class RotasBrasilScraper(SiteScraper):
         await self._page.evaluate("document.getElementById('btnSubmit').click()")
         logger.debug("Botão BUSCAR clicado via JS.")
 
-        # Se havia resultado anterior, espera ele sumir primeiro (evita falso positivo)
+        # Se havia resultado anterior, espera ele sumir primeiro (evita falso positivo).
+        # Timeout igual ao delay configurado (mínimo 12s) — se não sumir, levanta erro:
+        # dados errados (duplicata da linha anterior) são piores do que um item ERRO.
         if tem_resultado_anterior:
+            hidden_timeout_ms = max(delay_segundos * 1000, 12000)
             try:
                 await self._page.wait_for_selector(
-                    SEL_RESULTADO_ATIVO, state="hidden", timeout=5000
+                    SEL_RESULTADO_ATIVO, state="hidden", timeout=hidden_timeout_ms
                 )
             except PlaywrightTimeout:
-                pass  # se não sumiu, continua mesmo assim
+                raise TimeoutConsultaError(
+                    "Resultado anterior não saiu do DOM após "
+                    f"{hidden_timeout_ms // 1000}s — possível travamento da página."
+                )
 
         # Aguarda o resultado aparecer — usa delay_segundos como timeout máximo.
         # Assim, se o site responder em 3s num delay de 15s, avança imediatamente.
